@@ -82,12 +82,32 @@ function exportCSV() {
                 <Column field="id" header="المعرف" sortable style="min-width: 8rem"></Column>
                 <Column field="user.name" header="اسم المتبرع" sortable style="min-width: 12rem">
                     <template #body="slotProps">
-                        {{ slotProps.data.user?.name || 'مجهول' }}
+                        {{ slotProps.data.user?.name || slotProps.data?.user_name || 'مجهول' }}
                     </template>
                 </Column>
+
+                <Column field="user_phone" header="رقم هاتف المتبرع" sortable style="min-width: 12rem">
+                    <template #body="slotProps">
+                        {{ slotProps.data.user_phone || '-' }}
+                    </template>
+                </Column>
+
                 <Column field="category.name_ar" header="الفئة" sortable style="min-width: 12rem">
                     <template #body="slotProps">
                         {{ slotProps.data.category?.name_ar || slotProps.data.category?.name_en || 'غير محدد' }}
+                    </template>
+                </Column>
+
+                <Column field="case.title" header="حالة التبرع" sortable style="min-width: 12rem">
+                    <template #body="slotProps">
+                        <span v-if="slotProps.data.case">
+                            {{ slotProps.data.case?.title || '-' }}
+                        </span>
+
+                        <span v-if="slotProps.data.gift">
+                            اهداء الى
+                            {{ slotProps.data.gift?.receiver_name || '-' }}
+                        </span>
                     </template>
                 </Column>
                 <Column field="amount" header="المبلغ" sortable style="min-width: 10rem">
@@ -97,19 +117,10 @@ function exportCSV() {
                 </Column>
                 <Column field="status" header="الحالة" sortable style="min-width: 10rem">
                     <template #body="slotProps">
-                        {{ slotProps.data.status === 'paid' ? 'مدفوع' : 'معلق' }}
+                        {{ slotProps.data.status == 'paid' ? 'مدفوع' : 'معلق' }}
                     </template>
                 </Column>
-                <Column field="payment.payment_status" header="حالة الدفع" sortable style="min-width: 12rem">
-                    <template #body="slotProps">
-                        {{ formatPaymentStatus(slotProps.data.payment?.payment_status) }}
-                    </template>
-                </Column>
-                <Column field="payment.payment_method.name" header="طريقة الدفع" sortable style="min-width: 12rem">
-                    <template #body="slotProps">
-                        {{ slotProps.data.payment?.payment_method?.name || 'غير محدد' }}
-                    </template>
-                </Column>
+
                 <Column field="created_at" header="تاريخ الإنشاء" sortable style="min-width: 12rem">
                     <template #body="slotProps">
                         {{ new Date(slotProps.data.createdAt).toLocaleDateString('wn-US', { day: '2-digit', month: 'long', year: 'numeric' }) }}

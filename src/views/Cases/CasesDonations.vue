@@ -295,6 +295,12 @@ function removeImage() {
                 </template>
             </Column>
             <Column field="amount" header="المبلغ" sortable style="min-width: 10rem"></Column>
+            <Column field="qty" header="الكمية" sortable style="min-width: 10rem"></Column>
+            <Column field="total" header="الاجمالي" sortable style="min-width: 10rem">
+                <template #body="slotProps">
+                    {{ parseFloat(slotProps?.data.qty) * parseFloat(slotProps?.data.amount) || 0 }}
+                </template>
+            </Column>
             <Column field="status" header="الحالة" sortable style="min-width: 10rem">
                 <template #body="slotProps">
                     {{ slotProps.data?.donation?.status || '-' }}
@@ -304,6 +310,11 @@ function removeImage() {
                 <template #body="slotProps">
                     <img v-if="slotProps?.data?.case?.image_url" :src="slotProps?.data?.case?.image_url" alt="Donation Image" style="width: 50px; height: auto" />
                     <span v-else>-</span>
+                </template>
+            </Column>
+            <Column field="created_at" header="تاريخ الإنشاء" sortable style="min-width: 12rem">
+                <template #body="slotProps">
+                    {{ new Date(slotProps.data.createdAt).toLocaleDateString('wn-US', { day: '2-digit', month: 'long', year: 'numeric' }) }}
                 </template>
             </Column>
             <!-- <Column :exportable="false" style="min-width: 8rem">

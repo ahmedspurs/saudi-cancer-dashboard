@@ -233,8 +233,13 @@ async function deleteSelectedItems() {
                     {{ slotProps.data.donation_id || '-' }}
                 </template>
             </Column>
-            <Column field="recipient_name" header="اسم المستلم" sortable style="min-width: 12rem"></Column>
-            <Column field="phone" header="رقم الهاتف" sortable style="min-width: 12rem"></Column>
+            <Column field="giver_name" header="اسم المرسل" sortable style="min-width: 12rem">
+                <template #body="slotProps">
+                    {{ slotProps.data.giver_name || '-' }}
+                </template></Column
+            >
+            <Column field="receiver_name" header="اسم المستلم" sortable style="min-width: 12rem"></Column>
+            <Column field="receiver_name" header="رقم الهاتف" sortable style="min-width: 12rem"></Column>
             <Column field="message" header="الرسالة" style="min-width: 15rem">
                 <template #body="slotProps">
                     {{ slotProps.data.message || '-' }}
@@ -245,12 +250,17 @@ async function deleteSelectedItems() {
                     <i :class="slotProps.data.sms_sent ? 'pi pi-check text-green-500' : 'pi pi-times text-red-500'"></i>
                 </template>
             </Column>
-            <Column :exportable="false" style="min-width: 8rem">
+            <Column field="created_at" header="تاريخ الإنشاء" sortable style="min-width: 12rem">
+                <template #body="slotProps">
+                    {{ new Date(slotProps.data.createdAt).toLocaleDateString('wn-US', { day: '2-digit', month: 'long', year: 'numeric' }) }}
+                </template>
+            </Column>
+            <!-- <Column :exportable="false" style="min-width: 8rem">
                 <template #body="slotProps">
                     <Button icon="pi pi-pencil" outlined rounded class="ml-2" @click="editItem(slotProps.data)" :loading="loading" />
                     <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteItem(slotProps.data)" :loading="loading" />
                 </template>
-            </Column>
+            </Column> -->
         </DataTable>
         <Paginator
             :rows="options.limit"

@@ -120,7 +120,7 @@ async function updateItem() {
         }
     }
 
-    const res = await request.put(`users/${item.value.id}`, formData); // Fixed endpoint syntax
+    const res = await request.put(`users`, item.value.id, formData); // Fixed endpoint syntax
     if (res.status) {
         get();
         hideEditDialog();
@@ -155,7 +155,7 @@ function confirmDeleteItem(prod) {
 }
 
 async function deleteItem() {
-    const res = await request.delete(`users/${item.value.id}`);
+    const res = await request.delete(`users`, item.value.id);
     if (res.status) {
         toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم حذف المستخدم', life: 3000 });
         get();

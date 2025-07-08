@@ -307,17 +307,8 @@ function removeImage() {
 
             <Column selectionMode="multiple" style="width: 3rem" :exportable="false"></Column>
             <Column field="id" header="المعرف" sortable style="min-width: 8rem"></Column>
-            <Column field="donor.name" header="حالة التبرع" sortable style="min-width: 12rem">
-                <template #body="slotProps">
-                    {{ slotProps.data.donation?.case ? slotProps.data.doation.case.title : '-' }}
-                </template>
-            </Column>
 
-            <Column field="donor.name" header="نوع التبرع" sortable style="min-width: 12rem">
-                <template #body="slotProps">
-                    {{ slotProps.data?.donation?.category ? slotProps.data.donation?.category?.name_ar : '-' }}
-                </template>
-            </Column>
+            <Column field="payment_id" header="معرف الدفع في ميسر" sortable style="min-width: 10rem"></Column>
             <Column field="amount" header="المبلغ" sortable style="min-width: 10rem"></Column>
             <Column field="payment_method" header="طريقة الدفع" sortable style="min-width: 12rem">
                 <template #body="slotProps">
@@ -327,13 +318,6 @@ function removeImage() {
             <Column field="status" header="الحالة" sortable style="min-width: 10rem">
                 <template #body="slotProps">
                     {{ slotProps.data.payment_status || '-' }}
-                </template>
-            </Column>
-
-            <Column :exportable="false" style="min-width: 8rem">
-                <template #body="slotProps">
-                    <Button icon="pi pi-pencil" outlined rounded class="ml-2" @click="editItem(slotProps.data)" :loading="loading" />
-                    <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteItem(slotProps.data)" :loading="loading" />
                 </template>
             </Column>
         </DataTable>

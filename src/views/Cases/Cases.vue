@@ -44,6 +44,23 @@ const viewOptions = ref([
     { name: 'حالاتي', value: 'my' }
 ]);
 
+const types = ref([
+    { name: 'جميع الحالات', value: '' },
+
+    {
+        type: 'major',
+        name: 'حالات كبرى'
+    },
+    {
+        type: 'minor',
+        name: 'حالات صغرى'
+    },
+    {
+        type: 'urgent',
+        name: 'حالات عاجلة'
+    }
+]);
+
 onMounted(() => {
     getCategories();
     get();
@@ -139,6 +156,7 @@ const edit = async () => {
     loading.value = true;
     const formData = new FormData();
     formData.append('category_id', item.value.category_id || '');
+    formData.append('type', item.value.type || '');
     formData.append('title', item.value.title);
     formData.append('description', item.value.description || '');
     formData.append('target_amount', item.value.target_amount || '');
@@ -198,7 +216,7 @@ const confirmDeleteItem = (caseItem) => {
 const deleteItem = async () => {
     loading.value = true;
     try {
-        const res = await request.delete(`cases/${item.value.id}`);
+        const res = await request.delete(`cases/`, item.value.id);
         if (res.status) {
             toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم حذف الحالة', life: 3000 });
             get();
@@ -271,7 +289,7 @@ const onCategoryChange = () => {
             <h4 class="m-0">إدارة الحالات</h4>
             <div class="flex gap-4">
                 <Dropdown v-model="viewMode" :options="viewOptions" optionLabel="name" optionValue="value" placeholder="اختر العرض" class="w-48" @change="onViewModeChange" />
-                <Dropdown v-model="selectedCategory" :options="categories" optionLabel="name_ar" optionValue="id" placeholder="اختر الفئة" class="w-48" @change="onCategoryChange" />
+                <Dropdown v-model="selectedCategory" :options="types" optionLabel="name" optionValue="type" placeholder="اختر الفئة" class="w-48" @change="onCategoryChange" />
                 <IconField>
                     <InputIcon class="pi pi-search" />
                     <InputText v-model="options.search" @input="onCategoryChange" placeholder="بحث..." />
@@ -296,14 +314,12 @@ const onCategoryChange = () => {
             </Column>
 
             <Column field="target_amount" header="المبلغ المستهدف (ر.س)" sortable style="min-width: 10rem">
-                <!-- <template #body="slotProps">
-                    {{ slotProps.data.target_amount ? slotProps.data?.target_amount?.toFixed(2) : '-' }}
-                </template> -->
+                <template #body="slotProps">
+                    {{ slotProps.data.target_amount ? parseFloat(slotProps.data?.target_amount)?.toFixed(2) : '-' }}
+                </template>
             </Column>
             <Column field="progress" header="التقدم (%)" sortable style="min-width: 8rem">
-                <!-- <template #body="slotProps">
-                    {{ slotProps.data.progress ? slotProps.data.progress.toFixed(2) : '0.00' }}
-                </template> -->
+                <template #body="slotProps"> {{ slotProps.data.progress ? parseFloat(slotProps.data.progress).toFixed(2) : '0.00' }} % </template>
             </Column>
             <Column field="status" header="الحالة" sortable style="min-width: 10rem">
                 <template #body="slotProps">
@@ -319,6 +335,11 @@ const onCategoryChange = () => {
                 <template #body="slotProps">
                     <img v-if="slotProps.data.image_url" :src="slotProps.data.image_url" alt="Case Image" style="width: 50px; height: auto" />
                     <span v-else>-</span>
+                </template>
+            </Column>
+            <Column field="created_at" header="تاريخ الإنشاء" sortable style="min-width: 12rem">
+                <template #body="slotProps">
+                    {{ new Date(slotProps.data.createdAt).toLocaleDateString('wn-US', { day: '2-digit', month: 'long', year: 'numeric' }) }}
                 </template>
             </Column>
             <Column :exportable="false" style="min-width: 12rem">
@@ -356,6 +377,11 @@ const onCategoryChange = () => {
                     <label for="category_id" class="block font-bold mb-2">الفئة</label>
                     <Dropdown id="category_id" v-model="item.category_id" :options="categories" optionLabel="name_ar" optionValue="id" placeholder="اختر الفئة" :invalid="submitted && !item.category_id" class="w-full" />
                     <small v-if="submitted && !item.category_id" class="text-red-500">الفئة مطلوبة.</small>
+                </div>
+                <div>
+                    <label for="category_id" class="block font-bold mb-2">النوع</label>
+                    <Dropdown id="category_id" v-model="item.type" :options="types" optionLabel="name" optionValue="type" placeholder="اختر الفئة" :invalid="submitted && !item.type" class="w-full" />
+                    <small v-if="submitted && !item.type" class="text-red-500">الفئة مطلوبة.</small>
                 </div>
                 <div>
                     <label for="title" class="block font-bold mb-2">العنوان</label>

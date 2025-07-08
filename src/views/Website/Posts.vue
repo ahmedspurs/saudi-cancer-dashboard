@@ -7,6 +7,7 @@ import { useRouter } from 'vue-router';
 
 onMounted(() => {
     get();
+    getPostTypes();
 });
 
 const toast = useToast();
@@ -22,18 +23,19 @@ const options = ref({
     limit: 10,
     col: 'title_ar',
     search: '',
-    type: '' // Added for type filter
+    type_id: '' // Added for type filter
 });
 const selectedItems = ref();
 const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS }
 });
 const loading = ref(false);
-const typeOptions = ref([
-    { label: 'الكل', value: '' },
-    { label: 'أخبار', value: 'news' },
-    { label: 'معرض الصور', value: 'gallery' }
-]);
+const typeOptions = ref();
+
+const getPostTypes = async () => {
+    const res = await request.get('post-types');
+    typeOptions.value = res.data;
+};
 
 const search = async () => {
     loading.value = true;
@@ -121,11 +123,11 @@ function exportCSV() {
 }
 
 function navigateToAdd() {
-    router.push('/posts/add');
+    router.push('/add-post');
 }
 
 function navigateToEdit(id) {
-    router.push(`/posts/edit/${id}`);
+    router.push(`/edit-post/${id}`);
 }
 </script>
 
@@ -146,7 +148,7 @@ function navigateToEdit(id) {
                 <div class="flex flex-wrap gap-2 items-center justify-between">
                     <h4 class="m-0">إدارة المنشورات</h4>
                     <div class="flex gap-2">
-                        <Dropdown v-model="options.type" :options="typeOptions" optionLabel="label" optionValue="value" placeholder="اختر نوع المنشور" class="w-48" @change="get" />
+                        <Dropdown v-model="options.type_id" :options="typeOptions" optionLabel="name" optionValue="id" placeholder="اختر نوع المنشور" class="w-48" @change="get" />
                         <IconField>
                             <InputIcon class="pi pi-search" />
                             <InputText v-model="options.search" @change="search" placeholder="بحث..." />
@@ -159,7 +161,7 @@ function navigateToEdit(id) {
             <Column field="id" header="المعرف" sortable style="min-width: 8rem"></Column>
             <Column field="type" header="النوع" sortable style="min-width: 10rem">
                 <template #body="slotProps">
-                    {{ slotProps.data.type === 'news' ? 'أخبار' : 'معرض الصور' }}
+                    {{ slotProps.data?.type?.name || 'غير محدد' }}
                 </template>
             </Column>
             <Column field="title_ar" header="العنوان (عربي)" sortable style="min-width: 12rem"></Column>

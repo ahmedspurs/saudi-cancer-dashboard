@@ -160,9 +160,9 @@ function replyToMessage(email) {
                     {{ slotProps.data.message ? slotProps.data.message.slice(0, 50) + '...' : '-' }}
                 </template>
             </Column>
-            <Column field="createdAt" header="تاريخ الإنشاء" sortable style="min-width: 12rem">
+            <Column field="created_at" header="تاريخ الإنشاء" sortable style="min-width: 12rem">
                 <template #body="slotProps">
-                    {{ new Date(slotProps.data.createdAt).toLocaleDateString('ar-EG') }}
+                    {{ new Date(slotProps.data.createdAt).toLocaleDateString('wn-US', { day: '2-digit', month: 'long', year: 'numeric' }) }}
                 </template>
             </Column>
             <Column :exportable="false" style="min-width: 10rem">

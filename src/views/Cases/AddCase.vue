@@ -1,11 +1,11 @@
 <script setup>
 import request from '@/service/Request';
-import Select from 'primevue/select';
-import InputText from 'primevue/inputtext';
-import Textarea from 'primevue/textarea';
-import Checkbox from 'primevue/checkbox';
 import Button from 'primevue/button';
+import Checkbox from 'primevue/checkbox';
 import FileUpload from 'primevue/fileupload';
+import InputText from 'primevue/inputtext';
+import Select from 'primevue/select';
+import Textarea from 'primevue/textarea';
 import { useToast } from 'primevue/usetoast';
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -33,7 +33,20 @@ const statusOptions = ref([
     { label: 'مفتوح', value: 'open' },
     { label: 'مكتمل', value: 'completed' }
 ]);
-
+const types = ref([
+    {
+        type: 'major',
+        name: 'حالات كبرى'
+    },
+    {
+        type: 'minor',
+        name: 'حالات صغرى'
+    },
+    {
+        type: 'urgent',
+        name: 'حالات عاجلة'
+    }
+]);
 // Fetch categories on component mount
 onMounted(() => {
     getCategories();
@@ -98,6 +111,7 @@ const saveItem = async () => {
     // Prepare form data
     const formData = new FormData();
     formData.append('category_id', item.value.category_id || '');
+    formData.append('type', item.value.type || '');
     formData.append('title', item.value.title);
     formData.append('description', item.value.description || '');
     formData.append('target_amount', item.value.target_amount || '');
@@ -154,6 +168,12 @@ const exportCSV = () => {
                         <label for="category_id" class="block font-bold mb-2">الفئة</label>
                         <Select id="category_id" v-model="item.category_id" :options="categories" option-label="name_ar" option-value="id" placeholder="اختر الفئة" class="w-full" :invalid="submitted && item.category_id === null" />
                         <small v-if="submitted && item.category_id === null" class="text-red-500">الفئة مطلوبة.</small>
+                    </div>
+
+                    <div class="flex flex-col">
+                        <label for="category_id" class="block font-bold mb-2">النومع</label>
+                        <Select id="category_id" v-model="item.type" :options="types" option-label="name" option-value="type" placeholder="اختر الفئة" class="w-full" :invalid="submitted && item.type === null" />
+                        <small v-if="submitted && item.type === null" class="text-red-500">الفئة مطلوبة.</small>
                     </div>
 
                     <!-- Title -->

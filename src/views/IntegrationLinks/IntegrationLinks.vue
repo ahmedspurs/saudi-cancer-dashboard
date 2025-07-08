@@ -169,7 +169,7 @@ async function edit() {
     }
 
     try {
-        const res = await request.put(`integration-links/${item.value.id}`, formData);
+        const res = await request.put(`integration-links`, item.value.id, formData);
         if (res.status) {
             toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم تحديث الرابط', life: 3000 });
             get();
@@ -202,7 +202,7 @@ function confirmDeleteItem(link) {
 async function deleteItem() {
     loading.value = true;
     try {
-        const res = await request.delete(`integration-links/${item.value?.id}`);
+        const res = await request.delete(`integration-links`, item.value.id);
         if (res.status) {
             toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم حذف الرابط', life: 3000 });
             get();

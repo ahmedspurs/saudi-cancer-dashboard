@@ -105,7 +105,7 @@ async function edit() {
         formData.append(key, item.value[key]);
     }
 
-    const res = await request.put(`donation-categories/`, item.value.id, formData);
+    const res = await request.put(`donation-categories`, item.value.id, formData);
     if (res.status) {
         toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم تحديث الفئة', life: 3000 });
         get();

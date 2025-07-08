@@ -1,27 +1,28 @@
 <script setup>
 import request from '@/service/Request';
 import Button from 'primevue/button';
+import Dropdown from 'primevue/dropdown';
+import FileUpload from 'primevue/fileupload';
+import InputSwitch from 'primevue/inputswitch';
 import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
-import FileUpload from 'primevue/fileupload';
-import Dropdown from 'primevue/dropdown';
-import InputSwitch from 'primevue/inputswitch';
 import { useToast } from 'primevue/usetoast';
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
+onMounted(() => {
+    getPostTypes();
+});
 const toast = useToast();
 const router = useRouter();
 
 // Post type options for Dropdown
-const postTypes = ref([
-    { label: 'خبر', value: 'news' },
-    { label: 'معرض', value: 'gallery' }
-]);
+const postTypes = ref([]);
 
 // Form data for a new post
 const post = ref({
     type: 'news',
+    type_id: '',
     title_ar: '',
     title_en: '',
     content_ar: '',
@@ -30,6 +31,11 @@ const post = ref({
     is_active: true,
     slug: ''
 });
+
+const getPostTypes = async () => {
+    const res = await request.get('post-types');
+    postTypes.value = res.data;
+};
 
 // Gallery images and featured image
 const galleryImages = ref([]);
@@ -53,12 +59,12 @@ const savePost = async () => {
         loading.value = false;
         return;
     }
-    if (!post.value.type) {
+    if (!post.value.type.code) {
         toast.add({ severity: 'error', summary: 'خطأ', detail: 'نوع المنشور مطلوب', life: 3000 });
         loading.value = false;
         return;
     }
-    if (post.value.type === 'gallery' && !galleryImages.value.length) {
+    if (post.value.type.code === 'gallery' && !galleryImages.value.length) {
         toast.add({ severity: 'error', summary: 'خطأ', detail: 'يجب تحميل صورة واحدة على الأقل للمعرض', life: 3000 });
         loading.value = false;
         return;
@@ -66,7 +72,7 @@ const savePost = async () => {
 
     // Prepare form data
     const formData = new FormData();
-    formData.append('type', post.value.type);
+    formData.append('type_id', post.value.type?.id);
     formData.append('title_ar', post.value.title_ar);
     formData.append('title_en', post.value.title_en);
     if (post.value.content_ar) formData.append('content_ar', post.value.content_ar);
@@ -77,7 +83,7 @@ const savePost = async () => {
     if (imageFile.value) {
         formData.append('image_url', imageFile.value);
     }
-    if (post.value.type === 'gallery') {
+    if (post.value.type.code === 'gallery') {
         galleryImages.value.forEach((image, index) => {
             formData.append(`images[${index}]`, image.file);
             formData.append(`sort_orders[${index}]`, index);
@@ -174,6 +180,7 @@ const goBack = () => {
 
 <template>
     <div dir="rtl" class="p-6 mx-auto max-w-4xl">
+        <Toast />
         <div class="card bg-white shadow-md rounded-lg p-6">
             <h1 class="text-2xl font-bold mb-6 text-center">إضافة منشور جديد</h1>
             <form @submit.prevent="savePost" class="space-y-6">
@@ -181,7 +188,7 @@ const goBack = () => {
                     <!-- Post Type -->
                     <div class="flex flex-col">
                         <label for="type" class="block font-bold mb-2">نوع المنشور</label>
-                        <Dropdown id="type" v-model="post.type" :options="postTypes" optionLabel="label" optionValue="value" placeholder="اختر نوع المنشور" class="w-full" :invalid="submitted && !post.type" />
+                        <Dropdown id="type" v-model="post.type" :options="postTypes" optionLabel="name" optionValue="" placeholder="اختر نوع المنشور" class="w-full" :invalid="submitted && !post.type" />
                         <small v-if="submitted && !post.type" class="text-red-500">نوع المنشور مطلوب.</small>
                     </div>
 
@@ -232,7 +239,7 @@ const goBack = () => {
 
                     <!-- Featured Image (News or Gallery) -->
                     <div class="flex flex-col md:col-span-2">
-                        <label for="image" class="block font-bold mb-2">{{ post.type === 'news' ? 'صورة الخبر' : 'الصورة المميزة' }}</label>
+                        <label for="image" class="block font-bold mb-2">{{ post.type.code == 'news' ? 'صورة الخبر' : 'الصورة المميزة' }}</label>
                         <FileUpload name="image" accept="image/*" :maxFileSize="1000000" @select="onSelectImage" chooseLabel="اختيار" :multiple="false" :showUploadButton="false" :showCancelButton="true">
                             <template #empty>
                                 <span>اسحب الصورة هنا لرفعها.</span>
@@ -242,14 +249,14 @@ const goBack = () => {
                     </div>
 
                     <!-- Gallery Images (only for gallery type) -->
-                    <div v-if="post.type === 'gallery'" class="flex flex-col md:col-span-2">
+                    <div v-if="post.type.code == 'gallery'" class="flex flex-col md:col-span-2">
                         <label class="block font-bold mb-2">صور المعرض</label>
                         <FileUpload name="gallery_images" accept="image/*" :maxFileSize="1000000" @select="onSelectGalleryImages" chooseLabel="اختيار" :multiple="true" :showUploadButton="false" :showCancelButton="true">
                             <template #empty>
                                 <span>اسحب الصور هنا لرفعها.</span>
                             </template>
                         </FileUpload>
-                        <small v-if="submitted && post.type === 'gallery' && !galleryImages.length" class="text-red-500">يجب تحميل صورة واحدة على الأقل.</small>
+                        <small v-if="submitted && post.type.code === 'gallery' && !galleryImages.length" class="text-red-500">يجب تحميل صورة واحدة على الأقل.</small>
                     </div>
                 </div>
 
