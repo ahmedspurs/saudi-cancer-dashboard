@@ -56,7 +56,7 @@ const login = async () => {
                     <div class="text-center mb-8">
                         <img src="/images/main-logo-black.png" alt="شعار الجمعية السعودية للسرطان" class="w-full h-28 mb-6 object-contain dark:hidden" />
                         <img src="/images/main-logo-white.png" alt="شعار الجمعية السعودية للسرطان" class="w-full h-28 mb-6 object-contain dark:block hidden" />
-                        <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">مرحبًا بك في لوحة تحكم الجمعية السعودية للسرطان</div>
+                        <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">مرحبًا بك في لوحة تحكم جمعية السرطان السعودية</div>
                         <span class="text-muted-color font-medium">قم بتسجيل الدخول للمتابعة</span>
                     </div>
 
