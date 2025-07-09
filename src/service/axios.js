@@ -3,7 +3,8 @@ import axios from 'axios';
 
 // Create axios instance
 const instance = axios.create({
-    baseURL: 'http://localhost:3030/api/',
+    baseURL: 'https://api.ratlclinic.com/api/',
+    // baseURL: 'http://localhost:3030/api/',
     timeout: 60000,
     withCredentials: true,
     headers: {
