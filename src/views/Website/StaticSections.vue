@@ -51,10 +51,10 @@ const get = async (e) => {
             items.value = res.data;
             total.value = res.tot;
         }
-        loading.value = false;
     } catch (error) {
-        loading.value = false;
         toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل في جلب البيانات', life: 3000 });
+    } finally {
+        loading.value = false;
     }
 };
 
@@ -123,11 +123,13 @@ async function saveItem() {
     formData.append('is_active', item.value.is_active ? '1' : '0');
     formData.append('sort_order', item.value.sort_order || 0);
     if (imageFile.value) {
-        formData.append('image_url', imageFile.value);
+        formData.append('image_url', imageFile.value); // Binary image file
     }
 
     try {
-        const res = await request.post('static-sections', formData);
+        const res = await request.post('static-sections', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
         if (res.status) {
             toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم إنشاء القسم', life: 3000 });
             get();
@@ -166,11 +168,15 @@ async function edit() {
     formData.append('is_active', item.value.is_active ? '1' : '0');
     formData.append('sort_order', item.value.sort_order || 0);
     if (imageFile.value) {
-        formData.append('image_url', imageFile.value);
+        formData.append('image_url', imageFile.value); // Binary image file
+    } else if (!item.value.image_url) {
+        formData.append('remove_image', '1'); // Flag to remove existing image
     }
 
     try {
-        const res = await request.put(`static-sections`, item.value.id, formData);
+        const res = await request.put(`static-sections/${item.value.id}`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
         if (res.status) {
             toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم تحديث القسم', life: 3000 });
             get();
@@ -203,7 +209,7 @@ function confirmDeleteItem(section) {
 async function deleteItem() {
     loading.value = true;
     try {
-        const res = await request.delete(`static-sections`, item.value?.id);
+        const res = await request.delete(`static-sections/${item.value?.id}`);
         if (res.status) {
             toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم حذف القسم', life: 3000 });
             get();
@@ -263,7 +269,7 @@ function updateSlug() {
 
 <template>
     <div class="card" style="direction: rtl; text-align: right">
-        <Toolbar class="mb-6">
+        <Toolbar class="mb-4 md:mb-6">
             <template #start>
                 <Button label="جديد" icon="pi pi-plus" severity="primary" class="ml-2" @click="openNew" :loading="loading" />
                 <Button label="حذف" icon="pi pi-trash" severity="secondary" @click="confirmDeleteSelected" :disabled="loading || !selectedItems || !selectedItems.length" />
@@ -273,34 +279,34 @@ function updateSlug() {
             </template>
         </Toolbar>
 
-        <DataTable ref="dt" v-model:selection="selectedItems" :value="items" dataKey="id" :rows="options.limit" :filters="filters" :totalRecords="total" :loading="loading">
+        <DataTable ref="dt" v-model:selection="selectedItems" :value="items" dataKey="id" :rows="options.limit" :filters="filters" :totalRecords="total" :loading="loading" responsiveLayout="scroll" class="p-datatable-sm">
             <template #header>
                 <div class="flex flex-wrap gap-2 items-center justify-between">
-                    <h4 class="m-0">إدارة الأقسام الثابتة</h4>
+                    <h4 class="m-0 text-lg md:text-xl">إدارة الأقسام الثابتة</h4>
                     <IconField>
                         <InputIcon class="pi pi-search" />
-                        <InputText v-model="options.search" @change="search" placeholder="بحث..." />
+                        <InputText v-model="options.search" @change="search" placeholder="بحث..." class="w-full sm:w-auto" />
                     </IconField>
                 </div>
             </template>
 
             <Column selectionMode="multiple" style="width: 3rem" :exportable="false"></Column>
-            <Column field="id" header="المعرف" sortable style="min-width: 8rem"></Column>
-            <Column field="title_ar" header="العنوان (عربي)" sortable style="min-width: 12rem"></Column>
-            <Column field="title_en" header="العنوان (إنجليزي)" sortable style="min-width: 12rem"></Column>
-            <Column field="slug" header="الرابط" sortable style="min-width: 12rem"></Column>
-            <Column field="is_active" header="نشط" sortable style="min-width: 8rem">
+            <Column field="id" header="المعرف" sortable style="min-width: 6rem"></Column>
+            <Column field="title_ar" header="العنوان (عربي)" sortable style="min-width: 10rem"></Column>
+            <Column field="title_en" header="العنوان (إنجليزي)" sortable style="min-width: 10rem"></Column>
+            <Column field="slug" header="الرابط" sortable style="min-width: 10rem"></Column>
+            <Column field="is_active" header="نشط" sortable style="min-width: 6rem">
                 <template #body="slotProps">
                     <i :class="slotProps.data.is_active ? 'pi pi-check text-green-500' : 'pi pi-times text-red-500'"></i>
                 </template>
             </Column>
-            <Column field="image_url" header="الصورة" style="min-width: 10rem">
+            <Column field="image_url" header="الصورة" style="min-width: 8rem">
                 <template #body="slotProps">
-                    <img v-if="slotProps.data.image_url" :src="slotProps.data.image_url" alt="Section Image" style="width: 50px; height: auto" />
+                    <img v-if="slotProps.data.image_url" :src="slotProps.data.image_url" alt="Section Image" class="w-12 h-auto" />
                     <span v-else>-</span>
                 </template>
             </Column>
-            <Column :exportable="false" style="min-width: 8rem">
+            <Column :exportable="false" style="min-width: 6rem">
                 <template #body="slotProps">
                     <Button icon="pi pi-pencil" outlined rounded class="ml-2" @click="editItem(slotProps.data)" :loading="loading" />
                     <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteItem(slotProps.data)" :loading="loading" />
@@ -315,65 +321,66 @@ function updateSlug() {
             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
             :rowsPerPageOptions="[5, 10, 25]"
             currentPageReportTemplate="عرض {first} إلى {last} من {totalRecords} أقسام"
+            class="mt-4"
         ></Paginator>
     </div>
 
-    <Dialog v-model:visible="itemDialog" :style="{ width: '600px' }" header="قسم ثابت جديد" :modal="true" style="direction: rtl; text-align: right">
-        <div class="flex flex-col gap-6">
+    <Dialog v-model:visible="itemDialog" :style="{ width: '90vw', maxWidth: '600px' }" header="قسم ثابت جديد" :modal="true" style="direction: rtl; text-align: right">
+        <div class="flex flex-col gap-4 md:gap-6">
             <div>
-                <label for="title_ar" class="block font-bold mb-2">العنوان (عربي)</label>
+                <label for="title_ar" class="block font-bold mb-2 text-sm md:text-base">العنوان (عربي)</label>
                 <InputText id="title_ar" v-model.trim="item.title_ar" required autofocus :invalid="submitted && !item.title_ar" class="w-full" @input="updateSlug" />
                 <small v-if="submitted && !item.title_ar" class="text-red-500">العنوان العربي مطلوب.</small>
             </div>
             <div>
-                <label for="title_en" class="block font-bold mb-2">العنوان (إنجليزي)</label>
+                <label for="title_en" class="block font-bold mb-2 text-sm md:text-base">العنوان (إنجليزي)</label>
                 <InputText id="title_en" v-model.trim="item.title_en" class="w-full" @input="updateSlug" />
             </div>
             <div>
-                <label for="slug" class="block font-bold mb-2">الرابط</label>
+                <label for="slug" class="block font-bold mb-2 text-sm md:text-base">الرابط</label>
                 <InputText id="slug" v-model.trim="item.slug" required :invalid="submitted && !item.slug" class="w-full" />
                 <small v-if="submitted && !item.slug" class="text-red-500">الرابط مطلوب.</small>
             </div>
             <div>
-                <label for="content_ar" class="block font-bold mb-2">المحتوى (عربي)</label>
-                <Editor id="content_ar" v-model="item.content_ar" editorStyle="height: 200px" class="w-full" />
+                <label for="content_ar" class="block font-bold mb-2 text-sm md:text-base">المحتوى (عربي)</label>
+                <Editor id="content_ar" v-model="item.content_ar" editorStyle="height: 150px md:height: 200px" class="w-full" />
             </div>
             <div>
-                <label for="content_en" class="block font-bold mb-2">المحتوى (إنجليزي)</label>
-                <Editor id="content_en" v-model="item.content_en" editorStyle="height: 200px" class="w-full" />
+                <label for="content_en" class="block font-bold mb-2 text-sm md:text-base">المحتوى (إنجليزي)</label>
+                <Editor id="content_en" v-model="item.content_en" editorStyle="height: 150px md:height: 200px" class="w-full" />
             </div>
             <div>
-                <label for="meta_title_ar" class="block font-bold mb-2">عنوان الـ SEO (عربي)</label>
+                <label for="meta_title_ar" class="block font-bold mb-2 text-sm md:text-base">عنوان الـ SEO (عربي)</label>
                 <InputText id="meta_title_ar" v-model.trim="item.meta_title_ar" class="w-full" />
             </div>
             <div>
-                <label for="meta_title_en" class="block font-bold mb-2">عنوان الـ SEO (إنجليزي)</label>
+                <label for="meta_title_en" class="block font-bold mb-2 text-sm md:text-base">عنوان الـ SEO (إنجليزي)</label>
                 <InputText id="meta_title_en" v-model.trim="item.meta_title_en" class="w-full" />
             </div>
             <div>
-                <label for="meta_description_ar" class="block font-bold mb-2">وصف الـ SEO (عربي)</label>
-                <Textarea id="meta_description_ar" v-model="item.meta_description_ar" rows="4" class="w-full" />
+                <label for="meta_description_ar" class="block font-bold mb-2 text-sm md:text-base">وصف الـ SEO (عربي)</label>
+                <Textarea id="meta_description_ar" v-model="item.meta_description_ar" rows="3 md:rows-4" class="w-full" />
             </div>
             <div>
-                <label for="meta_description_en" class="block font-bold mb-2">وصف الـ SEO (إنجليزي)</label>
-                <Textarea id="meta_description_en" v-model="item.meta_description_en" rows="4" class="w-full" />
+                <label for="meta_description_en" class="block font-bold mb-2 text-sm md:text-base">وصف الـ SEO (إنجليزي)</label>
+                <Textarea id="meta_description_en" v-model="item.meta_description_en" rows="3 md:rows-4" class="w-full" />
             </div>
             <div>
-                <label for="image" class="block font-bold mb-2">الصورة</label>
-                <FileUpload name="demo[]" accept="image/*" :maxFileSize="1000000" @select="onSelectImage" chooseLabel="اختيار">
+                <label for="image" class="block font-bold mb-2 text-sm md:text-base">الصورة</label>
+                <FileUpload name="demo[]" accept="image/*" :maxFileSize="1000000" @select="onSelectImage" chooseLabel="اختيار" class="w-full">
                     <template #empty>
                         <span>اسحب الصورة هنا لرفعها.</span>
                     </template>
                 </FileUpload>
                 <small v-if="imageFile" class="text-gray-500">{{ imageFile.name }}</small>
-                <img v-if="item.previewImage" :src="item.previewImage" alt="Preview" style="width: 100px; height: auto; margin-top: 10px" />
+                <img v-if="item.previewImage" :src="item.previewImage" alt="Preview" class="w-20 h-auto mt-2 md:w-24" />
             </div>
             <div>
-                <label for="sort_order" class="block font-bold mb-2">ترتيب العرض</label>
+                <label for="sort_order" class="block font-bold mb-2 text-sm md:text-base">ترتيب العرض</label>
                 <InputNumber id="sort_order" v-model="item.sort_order" class="w-full" />
             </div>
             <div>
-                <label for="is_active" class="block font-bold mb-2">نشط</label>
+                <label for="is_active" class="block font-bold mb-2 text-sm md:text-base">نشط</label>
                 <InputSwitch id="is_active" v-model="item.is_active" />
             </div>
         </div>
@@ -383,65 +390,65 @@ function updateSlug() {
         </template>
     </Dialog>
 
-    <Dialog v-model:visible="editItemDialog" :style="{ width: '600px' }" header="تعديل القسم الثابت" :modal="true" style="direction: rtl; text-align: right">
-        <div class="flex flex-col gap-6">
+    <Dialog v-model:visible="editItemDialog" :style="{ width: '90vw', maxWidth: '600px' }" header="تعديل القسم الثابت" :modal="true" style="direction: rtl; text-align: right">
+        <div class="flex flex-col gap-4 md:gap-6">
             <div>
-                <label for="title_ar" class="block font-bold mb-2">العنوان (عربي)</label>
+                <label for="title_ar" class="block font-bold mb-2 text-sm md:text-base">العنوان (عربي)</label>
                 <InputText id="title_ar" v-model.trim="item.title_ar" required autofocus :invalid="submitted && !item.title_ar" class="w-full" @input="updateSlug" />
                 <small v-if="submitted && !item.title_ar" class="text-red-500">العنوان العربي مطلوب.</small>
             </div>
             <div>
-                <label for="title_en" class="block font-bold mb-2">العنوان (إنجليزي)</label>
+                <label for="title_en" class="block font-bold mb-2 text-sm md:text-base">العنوان (إنجليزي)</label>
                 <InputText id="title_en" v-model.trim="item.title_en" class="w-full" @input="updateSlug" />
             </div>
             <div>
-                <label for="slug" class="block font-bold mb-2">الرابط</label>
+                <label for="slug" class="block font-bold mb-2 text-sm md:text-base">الرابط</label>
                 <InputText id="slug" v-model.trim="item.slug" required :invalid="submitted && !item.slug" class="w-full" />
                 <small v-if="submitted && !item.slug" class="text-red-500">الرابط مطلوب.</small>
             </div>
             <div>
-                <label for="content_ar" class="block font-bold mb-2">المحتوى (عربي)</label>
-                <Editor id="content_ar" v-model="item.content_ar" editorStyle="height: 200px" class="w-full" />
+                <label for="content_ar" class="block font-bold mb-2 text-sm md:text-base">المحتوى (عربي)</label>
+                <Editor id="content_ar" v-model="item.content_ar" editorStyle="height: 150px md:height: 200px" class="w-full" />
             </div>
             <div>
-                <label for="content_en" class="block font-bold mb-2">المحتوى (إنجليزي)</label>
-                <Editor id="content_en" v-model="item.content_en" editorStyle="height: 200px" class="w-full" />
+                <label for="content_en" class="block font-bold mb-2 text-sm md:text-base">المحتوى (إنجليزي)</label>
+                <Editor id="content_en" v-model="item.content_en" editorStyle="height: 150px md:height: 200px" class="w-full" />
             </div>
             <div>
-                <label for="meta_title_ar" class="block font-bold mb-2">عنوان الـ SEO (عربي)</label>
+                <label for="meta_title_ar" class="block font-bold mb-2 text-sm md:text-base">عنوان الـ SEO (عربي)</label>
                 <InputText id="meta_title_ar" v-model.trim="item.meta_title_ar" class="w-full" />
             </div>
             <div>
-                <label for="meta_title_en" class="block font-bold mb-2">عنوان الـ SEO (إنجليزي)</label>
+                <label for="meta_title_en" class="block font-bold mb-2 text-sm md:text-base">عنوان الـ SEO (إنجليزي)</label>
                 <InputText id="meta_title_en" v-model.trim="item.meta_title_en" class="w-full" />
             </div>
             <div>
-                <label for="meta_description_ar" class="block font-bold mb-2">وصف الـ SEO (عربي)</label>
-                <Textarea id="meta_description_ar" v-model="item.meta_description_ar" rows="4" class="w-full" />
+                <label for="meta_description_ar" class="block font-bold mb-2 text-sm md:text-base">وصف الـ SEO (عربي)</label>
+                <Textarea id="meta_description_ar" v-model="item.meta_description_ar" rows="3 md:rows-4" class="w-full" />
             </div>
             <div>
-                <label for="meta_description_en" class="block font-bold mb-2">وصف الـ SEO (إنجليزي)</label>
-                <Textarea id="meta_description_en" v-model="item.meta_description_en" rows="4" class="w-full" />
+                <label for="meta_description_en" class="block font-bold mb-2 text-sm md:text-base">وصف الـ SEO (إنجليزي)</label>
+                <Textarea id="meta_description_en" v-model="item.meta_description_en" rows="3 md:rows-4" class="w-full" />
             </div>
             <div>
-                <label for="image" class="block font-bold mb-2">الصورة</label>
-                <FileUpload name="demo[]" accept="image/*" :maxFileSize="1000000" @select="onSelectImage" chooseLabel="اختيار">
+                <label for="image" class="block font-bold mb-2 text-sm md:text-base">الصورة</label>
+                <FileUpload name="demo[]" accept="image/*" :maxFileSize="1000000" @select="onSelectImage" chooseLabel="اختيار" class="w-full">
                     <template #empty>
                         <span>اسحب الصورة هنا لرفعها.</span>
                     </template>
                 </FileUpload>
                 <small v-if="imageFile" class="text-gray-500">{{ imageFile.name }}</small>
                 <div v-if="item.previewImage || item.image_url" class="mt-2">
-                    <img :src="item.previewImage || item.image_url" alt="Image" style="width: 100px; height: auto" />
+                    <img :src="item.previewImage || item.image_url" alt="Image" class="w-20 h-auto md:w-24" />
                     <Button label="إزالة الصورة" icon="pi pi-trash" severity="danger" text @click="removeImage" class="mt-2" />
                 </div>
             </div>
             <div>
-                <label for="sort_order" class="block font-bold mb-2">ترتيب العرض</label>
+                <label for="sort_order" class="block font-bold mb-2 text-sm md:text-base">ترتيب العرض</label>
                 <InputNumber id="sort_order" v-model="item.sort_order" class="w-full" />
             </div>
             <div>
-                <label for="is_active" class="block font-bold mb-2">نشط</label>
+                <label for="is_active" class="block font-bold mb-2 text-sm md:text-base">نشط</label>
                 <InputSwitch id="is_active" v-model="item.is_active" />
             </div>
         </div>
@@ -451,9 +458,9 @@ function updateSlug() {
         </template>
     </Dialog>
 
-    <Dialog v-model:visible="deleteItemDialog" :style="{ width: '450px' }" header="تأكيد الحذف" :modal="true" style="direction: rtl; text-align: right">
+    <Dialog v-model:visible="deleteItemDialog" :style="{ width: '90vw', maxWidth: '450px' }" header="تأكيد الحذف" :modal="true" style="direction: rtl; text-align: right">
         <div class="flex items-center gap-4">
-            <i class="pi pi-exclamation-triangle !text-3xl" />
+            <i class="pi pi-exclamation-triangle !text-2xl md:!text-3xl" />
             <span v-if="item"
                 >هل أنت متأكد من حذف <b>{{ item.title_ar }}</b
                 >؟</span
@@ -465,9 +472,9 @@ function updateSlug() {
         </template>
     </Dialog>
 
-    <Dialog v-model:visible="deleteItemsDialog" :style="{ width: '450px' }" header="تأكيد الحذف" :modal="true" style="direction: rtl; text-align: right">
+    <Dialog v-model:visible="deleteItemsDialog" :style="{ width: '90vw', maxWidth: '450px' }" header="تأكيد الحذف" :modal="true" style="direction: rtl; text-align: right">
         <div class="flex items-center gap-4">
-            <i class="pi pi-exclamation-triangle !text-3xl" />
+            <i class="pi pi-exclamation-triangle !text-2xl md:!text-3xl" />
             <span>هل أنت متأكد من حذف الأقسام المحددة؟</span>
         </div>
         <template #footer>
@@ -476,3 +483,43 @@ function updateSlug() {
         </template>
     </Dialog>
 </template>
+
+<style scoped>
+/* Ensure RTL and text alignment */
+.card {
+    direction: rtl;
+    text-align: right;
+}
+
+/* Responsive column widths for DataTable */
+.p-datatable-sm :deep(.p-datatable-thead > tr > th),
+.p-datatable-sm :deep(.p-datatable-tbody > tr > td) {
+    padding: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .p-datatable-sm :deep(.p-datatable-thead > tr > th),
+    .p-datatable-sm :deep(.p-datatable-tbody > tr > td) {
+        font-size: 0.875rem;
+    }
+
+    .p-datatable-sm :deep(.p-datatable-thead > tr > th:nth-child(n + 4)) {
+        display: none; /* Hide less critical columns on mobile */
+    }
+
+    .p-datatable-sm :deep(.p-datatable-tbody > tr > td:nth-child(n + 4)) {
+        display: none;
+    }
+}
+
+/* Ensure editor and textarea are responsive */
+:deep(.p-editor-container .p-editor-content) {
+    font-size: 0.875rem;
+}
+
+@media (min-width: 768px) {
+    :deep(.p-editor-container .p-editor-content) {
+        font-size: 1rem;
+    }
+}
+</style>

@@ -61,7 +61,9 @@ function isOutsideClicked(event) {
         <app-sidebar></app-sidebar>
         <div class="layout-main-container">
             <div class="layout-main">
-                <router-view></router-view>
+                <transition name="fade" mode="out-in">
+                    <router-view :key="$route.fullPath" />
+                </transition>
             </div>
             <app-footer></app-footer>
         </div>
@@ -69,3 +71,27 @@ function isOutsideClicked(event) {
     </div>
     <Toast />
 </template>
+
+<style>
+html {
+    scroll-behavior: smooth !important;
+}
+
+/* page transition  */
+.fade-enter-active,
+.fade-leave-active {
+    transition:
+        opacity 0.6s ease,
+        transform 0.6s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+    transform: translateY(20px);
+}
+.fade-enter-to,
+.fade-leave-from {
+    opacity: 1;
+    transform: translateY(0);
+}
+</style>

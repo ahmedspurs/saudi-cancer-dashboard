@@ -1,6 +1,8 @@
 // src/router/index.js
 import AppLayout from '@/layout/AppLayout.vue';
 import request from '@/service/Request';
+import LoadingService from "../service/Loading";
+
 import { createRouter, createWebHashHistory } from 'vue-router';
 // Utility to match routes (aligned with backend logic)
 const matchRoute = (routePattern, url) => {
@@ -233,16 +235,22 @@ const router = createRouter({
 
 // Auth guard
 router.beforeEach(async (to, from, next) => {
+    LoadingService.show();
+
     // Check if the route is public
     const isPublicRoute = publicRoutes.some((route) => matchRoute(route, to.path));
 
     if (isPublicRoute) {
+        LoadingService.hide();
+
         return next();
     }
 
     // Check if user is authenticated
     const loggedToken = localStorage.getItem('accessToken'); // Align with Axios instance
     if (!loggedToken) {
+        LoadingService.hide();
+
         return next({
             path: '/auth/login',
             query: { redirect: to.fullPath, error: 'not_authenticated' },
@@ -259,6 +267,8 @@ router.beforeEach(async (to, from, next) => {
 
         // If no roles are specified, allow access if authenticated
         if (!requiredRoles.length) {
+            LoadingService.hide();
+
             return next();
         }
 
@@ -266,14 +276,20 @@ router.beforeEach(async (to, from, next) => {
         const hasRequiredRole = requiredRoles.includes(user.role);
 
         if (hasRequiredRole) {
+            LoadingService.hide();
+
             return next();
         } else {
+            LoadingService.hide();
+
             return next({
                 path: '/auth/access',
                 query: { error: 'insufficient_permissions' },
             });
         }
     } catch (error) {
+        LoadingService.hide();
+
         console.error('Auth guard error:', {
             message: error.message,
             status: error.response?.status,
@@ -294,6 +310,8 @@ router.beforeEach(async (to, from, next) => {
             query: { error: 'server_error' },
         });
     } finally {
+        LoadingService.hide();
+
         window.scrollTo(0, 0); // Reset scroll position
     }
 });
