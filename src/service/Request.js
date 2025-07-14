@@ -2,7 +2,7 @@ import { api } from '@/service/axios';
 import { loaderState } from '@/utils/Loader'; // Adjust path
 
 const request = {
-  handleError(error, defaultMessage) {
+  handleError(error, defaultMessage, status) {
     const message =
       error?.response?.data?.message ||
       error?.response?.data?.msg ||
@@ -13,6 +13,7 @@ const request = {
       message,
       status: error?.response?.status,
       data: error?.response?.data,
+      status
     });
 
     return Promise.reject(error);
@@ -22,7 +23,7 @@ const request = {
 
 
     if (response?.data?.status) {
-      return response.data;
+      return { ...response.data, status_code: response.status };
     }
     return Promise.reject(response);
   },
@@ -35,7 +36,7 @@ const request = {
         validateStatus: (status) => status < 500,
       });
       if (response.status == 401) {
-        return request.handleError(response.data, response.data.msg)
+        return request.handleError(response.data, response.data.msg, response.status)
       }
       return response.data;
     } catch (error) {
@@ -61,7 +62,7 @@ const request = {
         validateStatus: (status) => status < 500,
       });
       if (response.status == 401) {
-        return request.handleError(response.data, response.data.msg)
+        return request.handleError(response.data, response.data.msg, response.status)
       }
       return request.handleSuccess(response);
     } catch (error) {
@@ -79,7 +80,7 @@ const request = {
         validateStatus: (status) => status < 500,
       });
       if (response.status == 401) {
-        return request.handleError(response.data, response.data.msg)
+        return request.handleError(response.data, response.data.msg, response.status)
       }
       return request.handleSuccess(response);
     } catch (error) {
@@ -97,7 +98,7 @@ const request = {
         validateStatus: (status) => status < 500,
       });
       if (response.status == 401) {
-        return request.handleError(response.data, response.data.msg)
+        return request.handleError(response.data, response.data.msg, response.status)
       }
       return request.handleSuccess(response);
     } catch (error) {

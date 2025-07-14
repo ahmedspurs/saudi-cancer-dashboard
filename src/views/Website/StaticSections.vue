@@ -174,7 +174,7 @@ async function edit() {
     }
 
     try {
-        const res = await request.put(`static-sections/${item.value.id}`, formData, {
+        const res = await request.put(`static-sections/`, item.value.id, formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
         if (res.status) {
@@ -209,7 +209,7 @@ function confirmDeleteItem(section) {
 async function deleteItem() {
     loading.value = true;
     try {
-        const res = await request.delete(`static-sections/${item.value?.id}`);
+        const res = await request.delete(`static-sections/`, item.value?.id);
         if (res.status) {
             toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم حذف القسم', life: 3000 });
             get();
@@ -279,7 +279,7 @@ function updateSlug() {
             </template>
         </Toolbar>
 
-        <DataTable ref="dt" v-model:selection="selectedItems" :value="items" dataKey="id" :rows="options.limit" :filters="filters" :totalRecords="total" :loading="loading" responsiveLayout="scroll" class="p-datatable-sm">
+        <DataTable paginatorPosition="both" ref="dt" v-model:selection="selectedItems" :value="items" dataKey="id" :rows="options.limit" :filters="filters" :totalRecords="total" :loading="loading" responsiveLayout="scroll" class="p-datatable-sm">
             <template #header>
                 <div class="flex flex-wrap gap-2 items-center justify-between">
                     <h4 class="m-0 text-lg md:text-xl">إدارة الأقسام الثابتة</h4>
@@ -302,7 +302,7 @@ function updateSlug() {
             </Column>
             <Column field="image_url" header="الصورة" style="min-width: 8rem">
                 <template #body="slotProps">
-                    <img v-if="slotProps.data.image_url" :src="slotProps.data.image_url" alt="Section Image" class="w-12 h-auto" />
+                    <img v-if="slotProps.data.image_url" :src="$imageService.getImageUrl(slotProps.data.image_url)" alt="Section Image" class="w-12 h-auto" />
                     <span v-else>-</span>
                 </template>
             </Column>

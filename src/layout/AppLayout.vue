@@ -61,9 +61,13 @@ function isOutsideClicked(event) {
         <app-sidebar></app-sidebar>
         <div class="layout-main-container">
             <div class="layout-main">
-                <transition name="fade" mode="out-in">
-                    <router-view :key="$route.fullPath" />
-                </transition>
+                <router-view :key="$route.fullPath" v-slot="{ Component }">
+                    <Transition name="fade" mode="out-in">
+                        <KeepAlive>
+                            <component :is="Component" />
+                        </KeepAlive>
+                    </Transition>
+                </router-view>
             </div>
             <app-footer></app-footer>
         </div>

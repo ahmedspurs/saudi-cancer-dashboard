@@ -19,6 +19,7 @@ const login = async () => {
             email: email.value,
             password: password.value
         });
+        console.log({ res });
 
         if (res.status) {
             localStorage.setItem('accessToken', res?.data?.accessToken);
@@ -38,7 +39,7 @@ const login = async () => {
         toast.add({
             severity: 'error',
             summary: 'خطأ',
-            detail: error?.response?.data?.msg || 'حدث خطأ أثناء الاتصال بالخادم.',
+            detail: error?.data?.msg || 'حدث خطأ أثناء الاتصال بالخادم.',
             life: 3000
         });
     } finally {
@@ -49,6 +50,7 @@ const login = async () => {
 
 <template>
     <FloatingConfigurator />
+    <Toast />
     <div class="bg-surface-50 dark:bg-surface-950 flex items-center justify-center min-h-screen min-w-[100vw] overflow-hidden">
         <div class="flex flex-col items-center justify-center">
             <div style="border-radius: 56px; padding: 0.3rem; background: linear-gradient(180deg, var(--primary-color) 10%, rgba(33, 150, 243, 0) 30%)">

@@ -71,18 +71,23 @@ function openNew() {
 function hideDialog() {
     itemDialog.value = false;
     submitted.value = false;
+    documentFile.value = null;
+    imageFile.value = null;
+    item.value.previewImage = null;
 }
 
 function hideEditDialog() {
     editItemDialog.value = false;
     submitted.value = false;
+    documentFile.value = null;
+    imageFile.value = null;
+    item.value.previewImage = null;
 }
 
 function onSelectDocument(event) {
-    const file = event.files[0];
+    const file = event.files?.[0];
     if (file) {
         if (file.size > 5000000) {
-            // 5MB limit
             toast.add({ severity: 'error', summary: 'خطأ', detail: 'حجم الملف يجب ألا يتجاوز 5 ميغابايت', life: 3000 });
             event.files = [];
             return;
@@ -95,14 +100,15 @@ function onSelectDocument(event) {
         }
         documentFile.value = file;
         event.files = [];
+    } else {
+        documentFile.value = null;
     }
 }
 
 function onSelectImage(event) {
-    const file = event.files[0];
+    const file = event.files?.[0];
     if (file) {
         if (file.size > 1000000) {
-            // 1MB limit for images
             toast.add({ severity: 'error', summary: 'خطأ', detail: 'حجم الصورة يجب ألا يتجاوز 1 ميغابايت', life: 3000 });
             event.files = [];
             return;
@@ -115,6 +121,9 @@ function onSelectImage(event) {
         imageFile.value = file;
         item.value.previewImage = URL.createObjectURL(file);
         event.files = [];
+    } else {
+        imageFile.value = null;
+        item.value.previewImage = null;
     }
 }
 
@@ -127,24 +136,35 @@ async function saveItem() {
 
     loading.value = true;
     const formData = new FormData();
-    formData.append('name_ar', item.value.name_ar);
+    formData.append('name_ar', item.value.name_ar || '');
     if (item.value.name_en) formData.append('name_en', item.value.name_en);
     if (item.value.description_ar) formData.append('description_ar', item.value.description_ar);
     if (item.value.description_en) formData.append('description_en', item.value.description_en);
-    formData.append('file_url', documentFile.value);
-    if (imageFile.value) formData.append('image_url', imageFile.value);
+    if (documentFile.value instanceof File) {
+        formData.append('file_url', documentFile.value);
+    } else {
+        toast.add({ severity: 'error', summary: 'خطأ', detail: 'الملف غير صالح', life: 3000 });
+        loading.value = false;
+        return;
+    }
+    if (imageFile.value instanceof File) {
+        formData.append('image_url', imageFile.value);
+    }
     formData.append('is_active', item.value.is_active ? '1' : '0');
-    formData.append('sort_order', item.value.sort_order || 0);
+    formData.append('sort_order', item.value.sort_order?.toString() || '0');
+
+    // Optional: Debug FormData contents
+    // for (const pair of formData.entries()) {
+    //     console.log(`${pair[0]}: ${pair[1]}`);
+    // }
 
     try {
-        const res = await request.post('comprehensive-documents', formData);
+        const res = await request.post('comprehensive-documents', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
         if (res.status) {
             toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم إنشاء المستند', life: 3000 });
             get();
-            item.value = {};
-            documentFile.value = null;
-            imageFile.value = null;
-            item.value.previewImage = null;
             hideDialog();
         } else {
             toast.add({ severity: 'error', summary: 'خطأ', detail: res.message || 'فشل في إنشاء المستند', life: 3000 });
@@ -165,24 +185,31 @@ async function edit() {
 
     loading.value = true;
     const formData = new FormData();
-    formData.append('name_ar', item.value.name_ar);
+    formData.append('name_ar', item.value.name_ar || '');
     if (item.value.name_en) formData.append('name_en', item.value.name_en);
     if (item.value.description_ar) formData.append('description_ar', item.value.description_ar);
     if (item.value.description_en) formData.append('description_en', item.value.description_en);
-    if (documentFile.value) formData.append('file_url', documentFile.value);
-    if (imageFile.value) formData.append('image_url', imageFile.value);
+    if (documentFile.value instanceof File) {
+        formData.append('file_url', documentFile.value);
+    }
+    if (imageFile.value instanceof File) {
+        formData.append('image_url', imageFile.value);
+    }
     formData.append('is_active', item.value.is_active ? '1' : '0');
-    formData.append('sort_order', item.value.sort_order || 0);
+    formData.append('sort_order', item.value.sort_order?.toString() || '0');
+
+    // Optional: Debug FormData contents
+    // for (const pair of formData.entries()) {
+    //     console.log(`${pair[0]}: ${pair[1]}`);
+    // }
 
     try {
-        const res = await request.put(`comprehensive-documents`, item.value.id, formData);
+        const res = await request.put(`comprehensive-documents/`, item.value.id, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
         if (res.status) {
             toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم تحديث المستند', life: 3000 });
             get();
-            item.value = {};
-            documentFile.value = null;
-            imageFile.value = null;
-            item.value.previewImage = null;
             hideEditDialog();
         } else {
             toast.add({ severity: 'error', summary: 'خطأ', detail: res.message || 'فشل في تحديث المستند', life: 3000 });
@@ -210,7 +237,7 @@ function confirmDeleteItem(document) {
 async function deleteItem() {
     loading.value = true;
     try {
-        const res = await request.delete(`comprehensive-documents`, item.value?.id);
+        const res = await request.delete(`comprehensive-documents/`, item.value?.id);
         if (res.status) {
             toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم حذف المستند', life: 3000 });
             get();
@@ -259,7 +286,6 @@ function removeDocument() {
 
 function removeImage() {
     imageFile.value = null;
-    item.value.image_url = null;
     item.value.previewImage = null;
 }
 </script>
@@ -293,13 +319,13 @@ function removeImage() {
             <Column field="name_en" header="الاسم (إنجليزي)" sortable style="min-width: 12rem"></Column>
             <Column field="file_url" header="رابط الملف" sortable style="min-width: 12rem">
                 <template #body="slotProps">
-                    <a :href="slotProps.data.file_url" target="_blank" v-if="slotProps.data.file_url">عرض الملف</a>
+                    <a :href="$imageService.getImageUrl(slotProps.data.file_url)" target="_blank" v-if="slotProps.data.file_url">عرض الملف</a>
                     <span v-else>-</span>
                 </template>
             </Column>
             <Column field="image_url" header="الصورة" style="min-width: 10rem">
                 <template #body="slotProps">
-                    <img v-if="slotProps.data.image_url" :src="slotProps.data.image_url" alt="Document Image" style="width: 50px; height: auto" />
+                    <img v-if="slotProps.data.image_url" :src="$imageService.getImageUrl(slotProps.data.image_url)" alt="Post Image" style="width: 50px; height: auto" />
                     <span v-else>-</span>
                 </template>
             </Column>

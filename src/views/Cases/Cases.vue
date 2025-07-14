@@ -297,7 +297,7 @@ const onCategoryChange = () => {
             </div>
         </div>
 
-        <DataTable ref="dt" v-model:selection="selectedItems" :value="items" dataKey="id" :rows="options.limit" :filters="filters" :totalRecords="total" :loading="loading">
+        <DataTable paginatorPosition="both" ref="dt" v-model:selection="selectedItems" :value="items" dataKey="id" :rows="options.limit" :filters="filters" :totalRecords="total" :loading="loading">
             <Column selectionMode="multiple" style="width: 3rem" :exportable="false"></Column>
             <Column field="id" header="المعرف" sortable style="min-width: 8rem"></Column>
             <Column field="title" header="العنوان" sortable style="min-width: 12rem"></Column>
@@ -333,7 +333,7 @@ const onCategoryChange = () => {
             </Column>
             <Column field="image_url" header="الصورة" style="min-width: 10rem">
                 <template #body="slotProps">
-                    <img v-if="slotProps.data.image_url" :src="slotProps.data.image_url" alt="Case Image" style="width: 50px; height: auto" />
+                    <img v-if="slotProps.data.image_url" :src="$imageService.getImageUrl(slotProps.data.image_url)" alt="Case Image" style="width: 80px; height: auto" />
                     <span v-else>-</span>
                 </template>
             </Column>

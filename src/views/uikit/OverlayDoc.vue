@@ -93,7 +93,7 @@ function confirm(event) {
                 <div class="flex flex-wrap gap-2">
                     <Button type="button" label="Show" @click="toggleDataTable" />
                     <Popover ref="op" id="overlay_panel" style="width: 450px">
-                        <DataTable v-model:selection="selectedProduct" :value="products" selectionMode="single" :paginator="true" :rows="5" @row-select="onProductSelect">
+                        <DataTable paginatorPosition="both" v-model:selection="selectedProduct" :value="products" selectionMode="single" :paginator="true" :rows="5" @row-select="onProductSelect">
                             <Column field="name" header="Name" sortable style="min-width: 12rem"></Column>
                             <Column header="Image">
                                 <template #body="slotProps">

@@ -1,10 +1,10 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue';
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
-import Chart from 'primevue/chart';
-import Dropdown from 'primevue/dropdown';
 import request from '@/service/Request';
+import Chart from 'primevue/chart';
+import Column from 'primevue/column';
+import DataTable from 'primevue/datatable';
+import Dropdown from 'primevue/dropdown';
+import { onMounted, ref, watch } from 'vue';
 
 // Summary metrics
 const stats = ref({
@@ -252,7 +252,7 @@ onMounted(() => {
                 <div class="col-span-12 lg:col-span-6">
                     <div class="card">
                         <div class="font-semibold text-xl mb-4">أعلى التبرعات</div>
-                        <DataTable :value="topDonations" :rows="5" :paginator="true" responsiveLayout="scroll">
+                        <DataTable paginatorPosition="both" :value="topDonations" :rows="5" :paginator="true" responsiveLayout="scroll">
                             <Column header="المعرف" field="id"></Column>
                             <Column header="المبلغ" field="amount">
                                 <template #body="slotProps"> {{ slotProps.data.amount }} ر.س </template>
@@ -267,7 +267,7 @@ onMounted(() => {
                 <div class="col-span-12 lg:col-span-6">
                     <div class="card">
                         <div class="font-semibold text-xl mb-4">الحالات</div>
-                        <DataTable :value="cases" :rows="5" :paginator="true" responsiveLayout="scroll">
+                        <DataTable paginatorPosition="both" :value="cases" :rows="5" :paginator="true" responsiveLayout="scroll">
                             <Column header="المعرف" field="id"></Column>
                             <Column header="العنوان" field="title"></Column>
                             <Column header="التقدم" field="progress">

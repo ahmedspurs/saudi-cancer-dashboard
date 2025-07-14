@@ -9,7 +9,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
     optimizeDeps: {
         noDiscovery: true,
-        include: ['file-saver', "primevue"] // Add this
+        include: ['file-saver', "primevue", "lodash"] // Add this
     },
     plugins: [
         vue(),

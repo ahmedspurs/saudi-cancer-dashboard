@@ -1,13 +1,13 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue';
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
-import Chart from 'primevue/chart';
-import Dropdown from 'primevue/dropdown';
-import Calendar from 'primevue/calendar';
-import Button from 'primevue/button';
 import request from '@/service/Request';
 import { saveAs } from 'file-saver';
+import Button from 'primevue/button';
+import Calendar from 'primevue/calendar';
+import Chart from 'primevue/chart';
+import Column from 'primevue/column';
+import DataTable from 'primevue/datatable';
+import Dropdown from 'primevue/dropdown';
+import { onMounted, ref, watch } from 'vue';
 
 // Filter states
 const dateRange = ref([null, null]);
@@ -194,7 +194,7 @@ onMounted(() => {
             <!-- Cases Table -->
             <div class="card">
                 <div class="font-semibold text-xl mb-4">تقرير الحالات</div>
-                <DataTable :value="cases" :rows="10" :paginator="true" responsiveLayout="scroll">
+                <DataTable paginatorPosition="both" :value="cases" :rows="10" :paginator="true" responsiveLayout="scroll">
                     <Column header="المعرف" field="id"></Column>
                     <Column header="العنوان" field="title"></Column>
                     <Column header="التقدم" field="progress">

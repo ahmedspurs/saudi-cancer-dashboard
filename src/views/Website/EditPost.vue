@@ -19,7 +19,7 @@ const postTypes = ref([]);
 
 // Form data for the post
 const post = ref({
-    type: null, // Will hold the full post type object
+    type: null,
     type_id: '',
     title_ar: '',
     title_en: '',
@@ -31,54 +31,43 @@ const post = ref({
 });
 
 // Gallery images and featured image
-const galleryImages = ref([]);
+const post_images = ref([]);
 const imageFile = ref(null); // For featured image (news or gallery)
+const existingImageUrl = ref(null); // Store existing featured image URL
 const submitted = ref(false);
 const loading = ref(false);
 
-// Fetch post types and post data when component is mounted
-onMounted(async () => {
-    await getPostTypes();
-    await fetchPost();
-});
-
+// Fetch post types
 const getPostTypes = async () => {
-    try {
-        const res = await request.get('post-types');
-        postTypes.value = res.data;
-    } catch (error) {
-        console.error('Error fetching post types:', error);
-        toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل في جلب أنواع المنشورات', life: 3000 });
-    }
+    const res = await request.get('post-types');
+    postTypes.value = res.data;
 };
 
-const fetchPost = async () => {
-    const postId = route.params.id;
+// Fetch post data by ID
+const getPost = async (id) => {
     try {
-        const res = await request.get(`posts/${postId}`);
+        const res = await request.get(`posts/${id}`);
         if (res.status) {
-            const selectedType = postTypes.value.find((pt) => pt.id === res.data.type_id) || { code: res.data.type };
+            const postData = res.data;
             post.value = {
-                type: selectedType,
-                type_id: res.data.type_id,
-                title_ar: res.data.title_ar,
-                title_en: res.data.title_en,
-                content_ar: res.data.content_ar || '',
-                content_en: res.data.content_en || '',
-                is_featured: res.data.is_featured,
-                is_active: res.data.is_active,
-                slug: res.data.slug
+                type: postTypes.value.find((pt) => pt.id === postData.type_id) || null,
+                type_id: postData.type_id,
+                title_ar: postData.title_ar || '',
+                title_en: postData.title_en || '',
+                content_ar: postData.content_ar || '',
+                content_en: postData.content_en || '',
+                is_featured: postData.is_featured,
+                is_active: postData.is_active,
+                slug: postData.slug || ''
             };
-            if (res.data.post_images) {
-                galleryImages.value = res.data.post_images.map((img, index) => ({
+            existingImageUrl.value = postData.image_url || null;
+            if (postData.type.code == 'gallery') {
+                post_images.value = res.data.post_images.map((img, index) => ({
                     file: null,
                     image_url: img.image_url,
-                    sort_order: img.sort_order,
-                    id: img.id
+                    sort_order: img.sort_order || index,
+                    id: img.id // Store image ID for updates/deletions
                 }));
-            }
-            if (res.data.image_url) {
-                imageFile.value = { name: res.data.image_url.split('/').pop() }; // Store only filename for display
             }
         } else {
             toast.add({ severity: 'error', summary: 'خطأ', detail: res.msg || 'فشل في جلب المنشور', life: 3000 });
@@ -91,8 +80,17 @@ const fetchPost = async () => {
     }
 };
 
+// Initialize data
+onMounted(async () => {
+    await getPostTypes();
+    const postId = route.params.id; // Get post ID from route
+    if (postId) {
+        await getPost(postId);
+    }
+});
+
 // Handle form submission
-const savePost = async () => {
+const updatePost = async () => {
     submitted.value = true;
     loading.value = true;
 
@@ -107,21 +105,21 @@ const savePost = async () => {
         loading.value = false;
         return;
     }
-    if (!post.value.type?.code) {
+    if (!post.value.type || !post.value.type.id) {
         toast.add({ severity: 'error', summary: 'خطأ', detail: 'نوع المنشور مطلوب', life: 3000 });
         loading.value = false;
         return;
     }
-    if (post.value.type.code === 'gallery' && !galleryImages.value.length) {
+    if (post.value.type.code === 'gallery' && !post_images.value.length) {
         toast.add({ severity: 'error', summary: 'خطأ', detail: 'يجب تحميل صورة واحدة على الأقل للمعرض', life: 3000 });
         loading.value = false;
         return;
     }
+    let images = [];
 
     // Prepare form data
     const formData = new FormData();
-    formData.append('_method', 'PUT');
-    formData.append('type_id', post.value.type?.id);
+    formData.append('type_id', post.value.type.id);
     formData.append('title_ar', post.value.title_ar);
     formData.append('title_en', post.value.title_en);
     if (post.value.content_ar) formData.append('content_ar', post.value.content_ar);
@@ -129,43 +127,45 @@ const savePost = async () => {
     if (post.value.slug) formData.append('slug', post.value.slug);
     formData.append('is_featured', post.value.is_featured ? '1' : '0');
     formData.append('is_active', post.value.is_active ? '1' : '0');
-    if (imageFile.value instanceof File) {
+    if (imageFile.value) {
         formData.append('image_url', imageFile.value);
     }
+
     if (post.value.type.code === 'gallery') {
-        galleryImages.value.forEach((image, index) => {
-            if (image.file instanceof File) {
+        post_images.value.forEach((image, index) => {
+            if (image.file) {
                 formData.append(`images[${index}]`, image.file);
             }
-            formData.append(`sort_orders[${index}]`, index);
+            formData.append(`sort_orders[${index}]`, image.sort_order);
             if (image.id) {
-                formData.append(`image_ids[${index}]`, image.id);
+                images.push(image.id);
             }
         });
+        formData.append(`image_ids`, images); // Include existing image IDs
     }
 
     try {
-        const postId = route.params.id;
-        const res = await request.post(`posts/${postId}`, formData, {
+        const res = await request.put(`posts`, route.params.id, formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
 
         if (res.status) {
-            toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم تعديل المنشور بنجاح', life: 3000 });
+            toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم تحديث المنشور بنجاح', life: 3000 });
             router.push('/posts');
         } else {
-            toast.add({ severity: 'error', summary: 'خطأ', detail: res.msg || 'فشل في تعديل المنشور', life: 3000 });
+            toast.add({ severity: 'error', summary: 'خطأ', detail: res.msg || 'فشل في تحديث المنشور', life: 3000 });
         }
     } catch (error) {
         console.error('Error updating post:', error);
-        toast.add({ severity: 'error', summary: 'خطأ', detail: error.response?.data?.msg || 'حدث خطأ ما', life: 3000 });
+        const errorMessage = error.response?.data?.msg || error.message || 'حدث خطأ ما';
+        toast.add({ severity: 'error', summary: 'خطأ', detail: errorMessage, life: 3000 });
     } finally {
         loading.value = false;
         submitted.value = false;
     }
 };
 
-// Handle single image selection for featured image
+// Handle single image selection for featured image (news or gallery)
 const onSelectImage = (event) => {
     const file = event.files[0];
     if (file) {
@@ -180,12 +180,13 @@ const onSelectImage = (event) => {
             return;
         }
         imageFile.value = file;
+        existingImageUrl.value = null; // Clear existing image URL if new file is selected
         event.files = [];
     }
 };
 
 // Handle multiple image selection for gallery posts
-const onSelectGalleryImages = (event) => {
+const onSelectpost_images = (event) => {
     const files = event.files;
     if (files.length) {
         files.forEach((file) => {
@@ -197,22 +198,16 @@ const onSelectGalleryImages = (event) => {
                 toast.add({ severity: 'error', summary: 'خطأ', detail: `يجب أن يكون ${file.name} صورة`, life: 3000 });
                 return;
             }
-            galleryImages.value.push({ file, sort_order: galleryImages.value.length });
+            post_images.value.push({ file, sort_order: post_images.value.length, image_url: null });
         });
-        event.files = [];
+        event.files = []; // Clear FileUpload
     }
 };
 
 // Remove a gallery image
 const removeGalleryImage = (index) => {
-    galleryImages.value.splice(index, 1);
-    galleryImages.value = galleryImages.value.map((img, i) => ({ ...img, sort_order: i }));
-};
-
-// Reset form
-const resetForm = async () => {
-    await fetchPost();
-    submitted.value = false;
+    post_images.value.splice(index, 1);
+    post_images.value = post_images.value.map((img, i) => ({ ...img, sort_order: i }));
 };
 
 // Go back
@@ -226,7 +221,7 @@ const goBack = () => {
         <Toast />
         <div class="card bg-white shadow-md rounded-lg p-6">
             <h1 class="text-2xl font-bold mb-6 text-center">تعديل المنشور</h1>
-            <form @submit.prevent="savePost" class="space-y-6">
+            <form @submit.prevent="updatePost" class="space-y-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Post Type -->
                     <div class="flex flex-col">
@@ -282,39 +277,40 @@ const goBack = () => {
 
                     <!-- Featured Image (News or Gallery) -->
                     <div class="flex flex-col md:col-span-2">
-                        <label for="image" class="block font-bold mb-2">{{ post.type?.code === 'news' ? 'صورة الخبر' : 'الصورة المميزة' }}</label>
+                        <label for="image" class="block font-bold mb-2">{{ post.type?.code == 'news' ? 'صورة الخبر' : 'الصورة المميزة' }}</label>
                         <FileUpload name="image" accept="image/*" :maxFileSize="1000000" @select="onSelectImage" chooseLabel="اختيار" :multiple="false" :showUploadButton="false" :showCancelButton="true">
                             <template #empty>
                                 <span>اسحب الصورة هنا لرفعها.</span>
                             </template>
                         </FileUpload>
                         <small v-if="imageFile" class="text-gray-500">{{ imageFile.name }}</small>
+                        <div v-if="existingImageUrl && !imageFile" class="mt-2">
+                            <img :src="$imageService.getImageUrl(existingImageUrl)" alt="Existing Featured Image" class="max-w-xs" />
+                        </div>
                     </div>
 
                     <!-- Gallery Images (only for gallery type) -->
-                    <div v-if="post.type?.code === 'gallery'" class="flex flex-col md:col-span-2">
+                    <div v-if="post.type?.code == 'gallery'" class="flex flex-col md:col-span-2">
                         <label class="block font-bold mb-2">صور المعرض</label>
-                        <FileUpload name="gallery_images" accept="image/*" :maxFileSize="1000000" @select="onSelectGalleryImages" chooseLabel="اختيار" :multiple="true" :showUploadButton="false" :showCancelButton="true">
+                        <FileUpload name="gallery_images" accept="image/*" :maxFileSize="1000000" @select="onSelectpost_images" chooseLabel="اختيار" :multiple="true" :showUploadButton="false" :showCancelButton="true">
                             <template #empty>
                                 <span>اسحب الصور هنا لرفعها.</span>
                             </template>
                         </FileUpload>
-                        <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div v-for="(image, index) in galleryImages" :key="index" class="relative">
-                                <img v-if="image.image_url" :src="'http://localhost:3030/' + image.image_url.split('public/')[1]" alt="Gallery Image" class="w-full h-32 object-cover rounded" />
-                                <img v-else-if="image.file" :src="URL.createObjectURL(image.file)" alt="Gallery Image" class="w-full h-32 object-cover rounded" />
-                                <Button icon="pi pi-times" class="p-button-rounded p-button-danger absolute top-0 right-0" @click="removeGalleryImage(index)" />
+                        <small v-if="submitted && post.type.code === 'gallery' && !post_images.length" class="text-red-500">يجب تحميل صورة واحدة على الأقل.</small>
+                        <div class="grid grid-cols-2 gap-4 mt-4">
+                            <div v-for="(image, index) in post_images" :key="index" class="relative">
+                                <img :src="$imageService.getImageUrl(image.image_url)" alt="Gallery Image" class="max-w-full h-auto" />
+                                <Button icon="pi pi-trash" class="p-button-danger p-button-sm absolute top-0 right-0" @click="removeGalleryImage(index)" />
                             </div>
                         </div>
-                        <small v-if="submitted && post.type?.code === 'gallery' && !galleryImages.length" class="text-red-500">يجب تحميل صورة واحدة على الأقل.</small>
                     </div>
                 </div>
 
                 <!-- Form Actions -->
                 <div class="flex justify-end gap-4 mt-6">
                     <Button label="العودة إلى المنشورات" icon="pi pi-arrow-right" text @click="goBack" :loading="loading" />
-                    <Button label="إعادة تعيين" icon="pi pi-refresh" text @click="resetForm" :loading="loading" />
-                    <Button type="submit" label="حفظ التغييرات" icon="pi pi-check" :loading="loading" />
+                    <Button type="submit" label="حفظ" icon="pi pi-check" :loading="loading" />
                 </div>
             </form>
         </div>

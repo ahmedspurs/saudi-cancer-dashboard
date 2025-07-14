@@ -1,11 +1,11 @@
 <script setup>
-import { ref, onMounted } from 'vue';
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
-import Chart from 'primevue/chart';
-import Button from 'primevue/button';
-import Menu from 'primevue/menu';
 import request from '@/service/Request';
+import Button from 'primevue/button';
+import Chart from 'primevue/chart';
+import Column from 'primevue/column';
+import DataTable from 'primevue/datatable';
+import Menu from 'primevue/menu';
+import { onMounted, ref } from 'vue';
 
 // حالة المقاييس
 const states = ref({
@@ -165,7 +165,7 @@ onMounted(() => {
         <div class="col-span-12 xl:col-span-6">
             <div class="card">
                 <div class="font-semibold text-xl mb-4">التبرعات الأخيرة</div>
-                <DataTable :value="donations" :rows="5" :paginator="true" responsiveLayout="scroll">
+                <DataTable paginatorPosition="both" :value="donations" :rows="5" :paginator="true" responsiveLayout="scroll">
                     <Column header="المعرف" field="id"></Column>
                     <Column header="المبلغ" field="amount">
                         <template #body="slotProps"> {{ slotProps.data.amount }} ر.س </template>
@@ -180,7 +180,7 @@ onMounted(() => {
             </div>
             <div class="card">
                 <div class="font-semibold text-xl mb-4">حالات المرضى الأخيرة</div>
-                <DataTable :value="patientCases" :rows="5" :paginator="true" responsiveLayout="scroll">
+                <DataTable paginatorPosition="both" :value="patientCases" :rows="5" :paginator="true" responsiveLayout="scroll">
                     <Column header="المعرف" field="id"></Column>
                     <Column header="العنوان" field="title"></Column>
                     <Column header="التقدم" field="progress">

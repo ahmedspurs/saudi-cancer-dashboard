@@ -17,7 +17,8 @@ const deleteItemDialog = ref(false);
 const total = ref(0);
 const deleteItemsDialog = ref(false);
 const item = ref({});
-const loading = ref(false);
+const loading = ref(false); // For table loader
+const buttonLoading = ref(false); // For button loader
 const options = ref({
     page: 1,
     limit: 10,
@@ -41,7 +42,6 @@ const search = async () => {
 
 const get = async (e) => {
     loading.value = true;
-
     if (e) {
         options.value.page = e.page + 1;
         options.value.limit = e.rows;
@@ -52,8 +52,8 @@ const get = async (e) => {
             items.value = res.data;
             total.value = res.tot;
         }
-        loading.value = false;
     } catch (error) {
+    } finally {
         loading.value = false;
     }
 };
@@ -80,19 +80,26 @@ async function saveItem() {
     submitted.value = true;
     if (!item.value.name_ar || !item.value.name_en) return;
 
+    buttonLoading.value = true;
     const formData = new FormData();
     for (var key in item.value) {
         formData.append(key, item.value[key]);
     }
 
-    const res = await request.post('donation-categories', formData);
-    if (res.status) {
-        toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم إنشاء الفئة', life: 3000 });
-        get();
-        item.value = {};
-        hideDialog();
-    } else {
+    try {
+        const res = await request.post('donation-categories', formData);
+        if (res.status) {
+            toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم إنشاء الفئة', life: 3000 });
+            get();
+            item.value = {};
+            hideDialog();
+        } else {
+            toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل في إنشاء الفئة', life: 3000 });
+        }
+    } catch (error) {
         toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل في إنشاء الفئة', life: 3000 });
+    } finally {
+        buttonLoading.value = false;
     }
 }
 
@@ -100,19 +107,26 @@ async function edit() {
     submitted.value = true;
     if (!item.value.name_ar || !item.value.name_en) return;
 
+    buttonLoading.value = true;
     const formData = new FormData();
     for (var key in item.value) {
         formData.append(key, item.value[key]);
     }
 
-    const res = await request.put(`donation-categories`, item.value.id, formData);
-    if (res.status) {
-        toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم تحديث الفئة', life: 3000 });
-        get();
-        item.value = {};
-        hideEditDialog();
-    } else {
+    try {
+        const res = await request.put(`donation-categories`, item.value.id, formData);
+        if (res.status) {
+            toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم تحديث الفئة', life: 3000 });
+            get();
+            item.value = {};
+            hideEditDialog();
+        } else {
+            toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل في تحديث الفئة', life: 3000 });
+        }
+    } catch (error) {
         toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل في تحديث الفئة', life: 3000 });
+    } finally {
+        buttonLoading.value = false;
     }
 }
 
@@ -122,20 +136,25 @@ function editItem(prod) {
 }
 
 function confirmDeleteItem(prod) {
-    console.log({ prod });
-
     item.value = prod;
     deleteItemDialog.value = true;
 }
 
 async function deleteItem() {
-    const res = await request.delete(`donation-categories`, item.value?.id);
-    if (res.status) {
-        toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم حذف الفئة', life: 3000 });
-        get();
-        deleteItemDialog.value = false;
-    } else {
+    buttonLoading.value = true;
+    try {
+        const res = await request.delete(`donation-categories`, item.value?.id);
+        if (res.status) {
+            toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم حذف الفئة', life: 3000 });
+            get();
+            deleteItemDialog.value = false;
+        } else {
+            toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل في حذف الفئة', life: 3000 });
+        }
+    } catch (error) {
         toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل في حذف الفئة', life: 3000 });
+    } finally {
+        buttonLoading.value = false;
         deleteItemDialog.value = false;
     }
 }
@@ -149,19 +168,22 @@ function confirmDeleteSelected() {
 }
 
 async function deleteSelectedItems() {
+    buttonLoading.value = true;
     const items = selectedItems.value.map((item) => item.id);
     try {
         const res = await request.delete('donation-categories/bulk', items);
         if (res.status) {
             selectedItems.value = null;
             toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم حذف الفئات', life: 3000 });
-            deleteItemsDialog.value = false;
             get();
         } else {
             toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل في حذف الفئات', life: 3000 });
         }
     } catch (error) {
         toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل في حذف الفئات', life: 3000 });
+    } finally {
+        buttonLoading.value = false;
+        deleteItemsDialog.value = false;
     }
 }
 </script>
@@ -170,15 +192,15 @@ async function deleteSelectedItems() {
     <div class="card" style="direction: rtl; text-align: right">
         <Toolbar class="mb-6">
             <template #start>
-                <Button label="جديد" icon="pi pi-plus" severity="primary" class="ml-2" @click="openNew" />
-                <Button label="حذف" icon="pi pi-trash" severity="secondary" @click="confirmDeleteSelected" :disabled="!selectedItems || !selectedItems.length" />
+                <Button label="جديد" icon="pi pi-plus" severity="primary" class="ml-2" @click="openNew" :loading="buttonLoading" />
+                <Button label="حذف" icon="pi pi-trash" severity="secondary" @click="confirmDeleteSelected" :disabled="!selectedItems || !selectedItems.length" :loading="buttonLoading" />
             </template>
             <template #end>
-                <Button label="تصدير" icon="pi pi-upload" severity="secondary" @click="exportCSV" />
+                <Button label="تصدير" icon="pi pi-upload" severity="secondary" @click="exportCSV" :loading="buttonLoading" />
             </template>
         </Toolbar>
 
-        <DataTable ref="dt" v-model:selection="selectedItems" :value="items" dataKey="id" :rows="options.limit" :filters="filters" :totalRecords="total" :loading="loading">
+        <DataTable paginatorPosition="both" ref="dt" v-model:selection="selectedItems" :value="items" dataKey="id" :rows="options.limit" :filters="filters" :totalRecords="total" :loading="loading" loadingIcon="pi pi-spinner pi-spin">
             <template #header>
                 <div class="flex flex-wrap gap-2 items-center justify-between">
                     <h4 class="m-0">إدارة فئات التبرعات</h4>
@@ -202,9 +224,8 @@ async function deleteSelectedItems() {
             </Column>
             <Column :exportable="false" style="min-width: 8rem">
                 <template #body="slotProps">
-                    <Button icon="pi pi-pencil" outlined rounded class="ml-2" @click="editItem(slotProps.data)" />
-
-                    <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteItem(slotProps.data)" />
+                    <Button icon="pi pi-pencil" outlined rounded class="ml-2" @click="editItem(slotProps.data)" :loading="buttonLoading" />
+                    <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteItem(slotProps.data)" :loading="buttonLoading" />
                 </template>
             </Column>
         </DataTable>
@@ -237,8 +258,8 @@ async function deleteSelectedItems() {
             </div>
         </div>
         <template #footer>
-            <Button label="إلغاء" icon="pi pi-times" text @click="hideDialog" />
-            <Button label="حفظ" icon="pi pi-check" @click="saveItem" />
+            <Button label="إلغاء" icon="pi pi-times" text @click="hideDialog" :loading="buttonLoading" />
+            <Button label="حفظ" icon="pi pi-check" @click="saveItem" :loading="buttonLoading" />
         </template>
     </Dialog>
 
@@ -260,8 +281,8 @@ async function deleteSelectedItems() {
             </div>
         </div>
         <template #footer>
-            <Button label="إلغاء" icon="pi pi-times" text @click="hideEditDialog" />
-            <Button label="حفظ" icon="pi pi-check" @click="edit" />
+            <Button label="إلغاء" icon="pi pi-times" text @click="hideEditDialog" :loading="buttonLoading" />
+            <Button label="حفظ" icon="pi pi-check" @click="edit" :loading="buttonLoading" />
         </template>
     </Dialog>
 
@@ -274,8 +295,8 @@ async function deleteSelectedItems() {
             >
         </div>
         <template #footer>
-            <Button label="لا" icon="pi pi-times" text @click="deleteItemDialog = false" />
-            <Button label="نعم" icon="pi pi-check" @click="deleteItem()" />
+            <Button label="لا" icon="pi pi-times" text @click="deleteItemDialog = false" :loading="buttonLoading" />
+            <Button label="نعم" icon="pi pi-check" @click="deleteItem()" :loading="buttonLoading" />
         </template>
     </Dialog>
 
@@ -285,8 +306,8 @@ async function deleteSelectedItems() {
             <span>هل أنت متأكد من حذف الفئات المحددة؟</span>
         </div>
         <template #footer>
-            <Button label="لا" icon="pi pi-times" text @click="deleteItemsDialog = false" />
-            <Button label="نعم" icon="pi pi-check" text @click="deleteSelectedItems" />
+            <Button label="لا" icon="pi pi-times" text @click="deleteItemsDialog = false" :loading="buttonLoading" />
+            <Button label="نعم" icon="pi pi-check" text @click="deleteSelectedItems" :loading="buttonLoading" />
         </template>
     </Dialog>
 </template>

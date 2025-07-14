@@ -16,7 +16,7 @@ onMounted(() => {
 <template>
     <div class="card">
         <div class="font-semibold text-xl mb-4">Leatest Research Upload</div>
-        <DataTable :value="research" :rows="5" :paginator="true" responsiveLayout="scroll">
+        <DataTable paginatorPosition="both" :value="research" :rows="5" :paginator="true" responsiveLayout="scroll">
             <Column header="ID" field="id"> </Column>
             <Column header="Title" field="name"> </Column>
             <Column field="cateogry" header="Category" :sortable="true">

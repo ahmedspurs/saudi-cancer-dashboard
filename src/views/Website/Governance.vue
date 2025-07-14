@@ -35,17 +35,25 @@ const imageFile = ref(null);
 const docFile = ref(null);
 
 const fetchCategories = async () => {
-    const res = await request.get('governance-categories');
-    if (res.status) {
-        categories.value = res.data;
+    try {
+        const res = await request.get('governance-categories');
+        if (res.status) {
+            categories.value = res.data;
+        }
+    } catch (error) {
+        toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل في جلب الفئات', life: 3000 });
     }
 };
 
 const search = async () => {
-    const res = await request.post('governance/search', options.value);
-    if (res.status) {
-        items.value = res.data;
-        total.value = res.tot;
+    try {
+        const res = await request.post('governance/search', options.value);
+        if (res.status) {
+            items.value = res.data;
+            total.value = res.tot;
+        }
+    } catch (error) {
+        toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل في البحث', life: 3000 });
     }
 };
 
@@ -64,11 +72,12 @@ const get = async (e) => {
         loading.value = false;
     } catch (error) {
         loading.value = false;
+        toast.add({ severity: 'error', summary: 'خطأ', detail: 'فشل في جلب البيانات', life: 3000 });
     }
 };
 
 function openNew() {
-    item.value = {};
+    item.value = { date: '' };
     imageFile.value = null;
     docFile.value = null;
     item.value.previewImage = null;
@@ -80,15 +89,25 @@ function openNew() {
 function hideDialog() {
     itemDialog.value = false;
     submitted.value = false;
+    item.value = {};
+    imageFile.value = null;
+    docFile.value = null;
+    item.value.previewImage = null;
+    item.value.previewFile = null;
 }
 
 function hideEditDialog() {
     editItemDialog.value = false;
     submitted.value = false;
+    item.value = {};
+    imageFile.value = null;
+    docFile.value = null;
+    item.value.previewImage = null;
+    item.value.previewFile = null;
 }
 
 function onSelectImage(event) {
-    const file = event.files[0];
+    const file = event.files?.[0];
     if (file) {
         if (file.size > 1000000) {
             toast.add({ severity: 'error', summary: 'خطأ', detail: 'حجم الصورة يجب ألا يتجاوز 1 ميغابايت', life: 3000 });
@@ -103,19 +122,22 @@ function onSelectImage(event) {
         imageFile.value = file;
         item.value.previewImage = URL.createObjectURL(file);
         event.files = [];
+    } else {
+        imageFile.value = null;
+        item.value.previewImage = null;
     }
 }
 
 function onSelectFile(event) {
-    const file = event.files[0];
+    const file = event.files?.[0];
     if (file) {
         if (file.size > 5000000) {
-            // 5MB limit for files
             toast.add({ severity: 'error', summary: 'خطأ', detail: 'حجم الملف يجب ألا يتجاوز 5 ميغابايت', life: 3000 });
             event.files = [];
             return;
         }
-        if (!['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(file.type)) {
+        const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+        if (!allowedTypes.includes(file.type)) {
             toast.add({ severity: 'error', summary: 'خطأ', detail: 'يجب تحميل ملف PDF أو Word فقط', life: 3000 });
             event.files = [];
             return;
@@ -123,6 +145,9 @@ function onSelectFile(event) {
         docFile.value = file;
         item.value.previewFile = file.name;
         event.files = [];
+    } else {
+        docFile.value = null;
+        item.value.previewFile = null;
     }
 }
 
@@ -135,25 +160,31 @@ async function saveItem() {
 
     loading.value = true;
     const formData = new FormData();
-    formData.append('title', item.value.title);
-    formData.append('title_en', item.value.title_en);
+    formData.append('title', item.value.title || '');
+    formData.append('title_en', item.value.title_en || '');
     if (item.value.description) formData.append('description', item.value.description);
     if (item.value.description_en) formData.append('description_en', item.value.description_en);
-    if (item.value.category_id) formData.append('category_id', item.value.category_id);
+    if (item.value.category_id) formData.append('category_id', item.value.category_id.toString());
     if (item.value.date) formData.append('date', item.value.date);
-    if (imageFile.value) formData.append('image', imageFile.value);
-    if (docFile.value) formData.append('file', docFile.value);
+    if (imageFile.value instanceof File) {
+        formData.append('image', imageFile.value);
+    }
+    if (docFile.value instanceof File) {
+        formData.append('file', docFile.value);
+    }
+
+    // Optional: Debug FormData contents
+    // for (const pair of formData.entries()) {
+    //     console.log(`${pair[0]}: ${pair[1]}`);
+    // }
 
     try {
-        const res = await request.post('governance', formData);
+        const res = await request.post('governance', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
         if (res.status) {
             toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم إنشاء سجل الحوكمة', life: 3000 });
             get();
-            item.value = {};
-            imageFile.value = null;
-            docFile.value = null;
-            item.value.previewImage = null;
-            item.value.previewFile = null;
             hideDialog();
         } else {
             toast.add({ severity: 'error', summary: 'خطأ', detail: res.message || 'فشل في إنشاء سجل الحوكمة', life: 3000 });
@@ -174,25 +205,31 @@ async function edit() {
 
     loading.value = true;
     const formData = new FormData();
-    formData.append('title', item.value.title);
-    formData.append('title_en', item.value.title_en);
+    formData.append('title', item.value.title || '');
+    formData.append('title_en', item.value.title_en || '');
     if (item.value.description) formData.append('description', item.value.description);
     if (item.value.description_en) formData.append('description_en', item.value.description_en);
-    if (item.value.category_id) formData.append('category_id', item.value.category_id);
+    if (item.value.category_id) formData.append('category_id', item.value.category_id.toString());
     if (item.value.date) formData.append('date', item.value.date);
-    if (imageFile.value) formData.append('image', imageFile.value);
-    if (docFile.value) formData.append('file', docFile.value);
+    if (imageFile.value instanceof File) {
+        formData.append('image', imageFile.value);
+    }
+    if (docFile.value instanceof File) {
+        formData.append('file', docFile.value);
+    }
+
+    // Optional: Debug FormData contents
+    // for (const pair of formData.entries()) {
+    //     console.log(`${pair[0]}: ${pair[1]}`);
+    // }
 
     try {
-        const res = await request.put(`governance`, item.value.id, formData);
+        const res = await request.put(`governance`, item.value.id, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
         if (res.status) {
             toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم تحديث سجل الحوكمة', life: 3000 });
             get();
-            item.value = {};
-            imageFile.value = null;
-            docFile.value = null;
-            item.value.previewImage = null;
-            item.value.previewFile = null;
             hideEditDialog();
         } else {
             toast.add({ severity: 'error', summary: 'خطأ', detail: res.message || 'فشل في تحديث سجل الحوكمة', life: 3000 });
@@ -205,7 +242,7 @@ async function edit() {
 }
 
 function editItem(prod) {
-    item.value = { ...prod };
+    item.value = { ...prod, category_id: prod.category?.id || null };
     imageFile.value = null;
     docFile.value = null;
     item.value.previewImage = null;
@@ -265,13 +302,11 @@ async function deleteSelectedItems() {
 }
 
 function removeImage() {
-    item.value.image_url = null;
     imageFile.value = null;
     item.value.previewImage = null;
 }
 
 function removeFile() {
-    item.value.file = null;
     docFile.value = null;
     item.value.previewFile = null;
 }
@@ -289,7 +324,7 @@ function removeFile() {
             </template>
         </Toolbar>
 
-        <DataTable ref="dt" v-model:selection="selectedItems" :value="items" dataKey="id" :rows="options.limit" :filters="filters" :totalRecords="total" :loading="loading">
+        <DataTable paginatorPosition="both" ref="dt" v-model:selection="selectedItems" :value="items" dataKey="id" :rows="options.limit" :filters="filters" :totalRecords="total" :loading="loading">
             <template #header>
                 <div class="flex flex-wrap gap-2 items-center justify-between">
                     <h4 class="m-0">إدارة الحوكمة</h4>
@@ -306,19 +341,19 @@ function removeFile() {
             <Column field="title_en" header="العنوان (إنجليزي)" sortable style="min-width: 12rem"></Column>
             <Column field="category.name_ar" header="الفئة" sortable style="min-width: 12rem">
                 <template #body="slotProps">
-                    {{ slotProps.data.category ? slotProps.data.category.name_ar : '-' }}
+                    {{ slotProps.data.category ? slotProps.data.category.name : '-' }}
                 </template>
             </Column>
             <Column field="date" header="التاريخ" sortable style="min-width: 10rem"></Column>
             <Column field="image_url" header="الصورة" style="min-width: 10rem">
                 <template #body="slotProps">
-                    <img v-if="slotProps.data.image" :src="slotProps.data.image" alt="Governance Image" style="width: 50px; height: auto" />
+                    <img v-if="slotProps.data.image" :src="$imageService.getImageUrl(slotProps.data.image)" alt="Governance Image" style="width: 50px; height: auto" />
                     <span v-else>-</span>
                 </template>
             </Column>
             <Column field="file" header="الملف" style="min-width: 10rem">
                 <template #body="slotProps">
-                    <a v-if="slotProps.data.file" :href="slotProps.data.file" target="_blank">عرض الملف</a>
+                    <a v-if="slotProps.data.file" :href="$imageService.getImageUrl(slotProps.data.file)" target="_blank">عرض الملف</a>
                     <span v-else>-</span>
                 </template>
             </Column>
@@ -442,8 +477,11 @@ function removeFile() {
                         <span>اسحب الملف (PDF أو Word) هنا لرفعه.</span>
                     </template>
                 </FileUpload>
-                <small v-if="docFile || item.file" class="text-gray-500">{{ docFile ? docFile.name : item.file }}</small>
-                <Button v-if="item.file || docFile" label="إزالة الملف" icon="pi pi-trash" severity="danger" text @click="removeFile" class="mt-2" />
+                <small v-if="docFile" class="text-gray-500">{{ docFile.name }}</small>
+                <div v-if="item.file" class="mt-2">
+                    <a :href="item.file" target="_blank">عرض الملف الحالي</a>
+                    <Button label="إزالة الملف" icon="pi pi-trash" severity="danger" text @click="removeFile" class="mt-2" />
+                </div>
             </div>
         </div>
         <template #footer>

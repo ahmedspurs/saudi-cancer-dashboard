@@ -21,8 +21,8 @@ const donors = ref([]);
 const patientCases = ref([]);
 const statuses = ref([
     { name: 'معلق', value: 'pending' },
-    { name: 'مؤكد', value: 'confirmed' },
-    { name: 'مرفوض', value: 'rejected' }
+    { name: 'مؤكد', value: 'paid' },
+    { name: 'مرفوض', value: 'faliled' }
 ]);
 const options = ref({
     page: 1,
@@ -275,10 +275,10 @@ function removeImage() {
             </template>
         </Toolbar>
 
-        <DataTable ref="dt" v-model:selection="selectedItems" :value="items" dataKey="id" :rows="options.limit" :filters="filters" :totalRecords="total" :loading="loading">
+        <DataTable paginatorPosition="both" ref="dt" v-model:selection="selectedItems" :value="items" dataKey="id" :rows="options.limit" :filters="filters" :totalRecords="total" :loading="loading">
             <template #header>
                 <div class="flex flex-wrap gap-2 items-center justify-between">
-                    <h4 class="m-0">إدارة التبرعات لحالات المرضى</h4>
+                    <h4 class="m-0">إدارة التبرعات لحالات التبرع</h4>
                     <IconField>
                         <InputIcon class="pi pi-search" />
                         <InputText v-model="options.search" @change="search" placeholder="بحث..." />
@@ -303,12 +303,12 @@ function removeImage() {
             </Column>
             <Column field="status" header="الحالة" sortable style="min-width: 10rem">
                 <template #body="slotProps">
-                    {{ slotProps.data?.donation?.status || '-' }}
+                    {{ slotProps.data?.donation?.status || 'فشل' }}
                 </template>
             </Column>
             <Column field="image_url" header="الصورة" style="min-width: 10rem">
                 <template #body="slotProps">
-                    <img v-if="slotProps?.data?.case?.image_url" :src="slotProps?.data?.case?.image_url" alt="Donation Image" style="width: 50px; height: auto" />
+                    <img v-if="slotProps?.data?.case?.image_url" :src="$imageService.getImageUrl(slotProps?.data?.case?.image_url)" alt="Donation Image" style="width: 50px; height: auto" />
                     <span v-else>-</span>
                 </template>
             </Column>

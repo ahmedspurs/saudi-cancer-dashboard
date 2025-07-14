@@ -171,7 +171,7 @@ const exportCSV = () => {
                     </div>
 
                     <div class="flex flex-col">
-                        <label for="category_id" class="block font-bold mb-2">النومع</label>
+                        <label for="category_id" class="block font-bold mb-2">النوع</label>
                         <Select id="category_id" v-model="item.type" :options="types" option-label="name" option-value="type" placeholder="اختر الفئة" class="w-full" :invalid="submitted && item.type === null" />
                         <small v-if="submitted && item.type === null" class="text-red-500">الفئة مطلوبة.</small>
                     </div>

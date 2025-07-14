@@ -176,7 +176,7 @@ async function deleteSelectedItems() {
             </template>
         </Toolbar>
 
-        <DataTable :loading="loading" ref="dt" v-model:selection="selectedItems" :value="items" dataKey="id" :rows="options.limit" :filters="filters" :totalRecords="total">
+        <DataTable paginatorPosition="both" :loading="loading" ref="dt" v-model:selection="selectedItems" :value="items" dataKey="id" :rows="options.limit" :filters="filters" :totalRecords="total">
             <template #header>
                 <div class="flex flex-wrap gap-2 items-center justify-between">
                     <h4 class="m-0">إدارة خيارات تخفيف الألم</h4>

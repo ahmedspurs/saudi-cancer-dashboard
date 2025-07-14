@@ -114,11 +114,6 @@ async function saveItem() {
     formData.append('type', item.value.type);
     formData.append('is_active', item.value.is_active ? 1 : 0);
     if (item.value.script) formData.append('script', item.value.script);
-    if (imageFile.value) {
-        formData.append('image', imageFile.value);
-        formData.append('demo[]', imageFile.value); // Fallback for backend
-        console.log('Appending image:', imageFile.value); // Debugging
-    }
 
     // Log FormData contents
     for (let [key, value] of formData.entries()) {
@@ -157,11 +152,6 @@ async function edit() {
     formData.append('type', item.value.type);
     formData.append('is_active', item.value.is_active ? 1 : 0);
     if (item.value.script) formData.append('script', item.value.script);
-    if (imageFile.value) {
-        formData.append('image', imageFile.value);
-        formData.append('demo[]', imageFile.value); // Fallback for backend
-        console.log('Appending image:', imageFile.value); // Debugging
-    }
 
     // Log FormData contents
     for (let [key, value] of formData.entries()) {
@@ -264,7 +254,7 @@ function removeImage() {
             </template>
         </Toolbar>
 
-        <DataTable ref="dt" v-model:selection="selectedItems" :value="items" dataKey="id" :rows="options.limit" :filters="filters" :totalRecords="total" :loading="loading">
+        <DataTable paginatorPosition="both" ref="dt" v-model:selection="selectedItems" :value="items" dataKey="id" :rows="options.limit" :filters="filters" :totalRecords="total" :loading="loading">
             <template #header>
                 <div class="flex flex-wrap gap-2 items-center justify-between">
                     <h4 class="m-0">إدارة روابط التكامل</h4>
@@ -328,16 +318,6 @@ function removeImage() {
                 <label for="is_active" class="block font-bold mb-2">الحالة</label>
                 <InputSwitch id="is_active" v-model="item.is_active" />
             </div>
-            <div>
-                <label for="image" class="block font-bold mb-2">الصورة</label>
-                <FileUpload name="demo[]" accept="image/*" :maxFileSize="1000000" @select="onSelectImage" chooseLabel="اختيار">
-                    <template #empty>
-                        <span>اسحب الصورة هنا لرفعها.</span>
-                    </template>
-                </FileUpload>
-                <small v-if="imageFile" class="text-gray-500">{{ imageFile.name }}</small>
-                <img v-if="item.previewImage" :src="item.previewImage" alt="Preview" style="width: 100px; height: auto; margin-top: 10px" />
-            </div>
         </div>
         <template #footer>
             <Button label="إلغاء" icon="pi pi-times" text @click="hideDialog" :loading="loading" />
@@ -364,19 +344,6 @@ function removeImage() {
             <div>
                 <label for="is_active" class="block font-bold mb-2">الحالة</label>
                 <InputSwitch id="is_active" v-model="item.is_active" />
-            </div>
-            <div>
-                <label for="image" class="block font-bold mb-2">الصورة</label>
-                <FileUpload name="demo[]" accept="image/*" :maxFileSize="1000000" @select="onSelectImage" chooseLabel="اختيار">
-                    <template #empty>
-                        <span>اسحب الصورة هنا لرفعها.</span>
-                    </template>
-                </FileUpload>
-                <small v-if="imageFile" class="text-gray-500">{{ imageFile.name }}</small>
-                <div v-if="item.previewImage || item.image_url" class="mt-2">
-                    <img :src="item.previewImage || item.image_url" alt="Image" style="width: 100px; height: auto" />
-                    <Button label="إزالة الصورة" icon="pi pi-trash" severity="danger" text @click="removeImage" class="mt-2" />
-                </div>
             </div>
         </div>
         <template #footer>

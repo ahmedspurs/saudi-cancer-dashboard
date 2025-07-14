@@ -1,13 +1,13 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue';
-import DataTable from 'primevue/datatable';
-import Column from 'primevue/column';
-import Chart from 'primevue/chart';
-import Dropdown from 'primevue/dropdown';
-import Calendar from 'primevue/calendar';
-import Button from 'primevue/button';
 import request from '@/service/Request';
 import { saveAs } from 'file-saver';
+import Button from 'primevue/button';
+import Calendar from 'primevue/calendar';
+import Chart from 'primevue/chart';
+import Column from 'primevue/column';
+import DataTable from 'primevue/datatable';
+import Dropdown from 'primevue/dropdown';
+import { onMounted, ref, watch } from 'vue';
 
 // حالة الفلاتر
 const dateRange = ref([null, null]);
@@ -208,7 +208,7 @@ onMounted(() => {
             <!-- جدول التبرعات -->
             <div class="card">
                 <div class="font-semibold text-xl mb-4">تقرير التبرعات</div>
-                <DataTable :value="donations" :rows="10" :paginator="true" responsiveLayout="scroll">
+                <DataTable paginatorPosition="both" :value="donations" :rows="10" :paginator="true" responsiveLayout="scroll">
                     <Column header="المعرف" field="id"></Column>
                     <Column header="المبلغ" field="amount">
                         <template #body="slotProps"> {{ slotProps.data.amount }} ر.س </template>

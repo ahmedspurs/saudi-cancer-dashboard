@@ -1,7 +1,7 @@
 <script setup>
+import request from '@/service/Request';
 import { FilterMatchMode } from '@primevue/core/api';
 import { onMounted, ref } from 'vue';
-import request from '@/service/Request';
 
 onMounted(() => {
     get();
@@ -54,7 +54,7 @@ function exportCSV() {
                 </template>
             </Toolbar>
 
-            <DataTable ref="dt" :value="items" dataKey="id" :rows="options.limit" :filters="filters" :totalRecords="total">
+            <DataTable paginatorPosition="both" ref="dt" :value="items" dataKey="id" :rows="options.limit" :filters="filters" :totalRecords="total">
                 <template #header>
                     <div class="flex flex-wrap gap-2 items-center justify-between">
                         <h4 class="m-0">View Messages</h4>

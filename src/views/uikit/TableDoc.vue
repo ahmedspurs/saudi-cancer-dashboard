@@ -145,6 +145,7 @@ function calculateCustomerTotal(name) {
     <div class="card">
         <div class="font-semibold text-xl mb-4">Filtering</div>
         <DataTable
+            paginatorPosition="both"
             :value="customers1"
             :paginator="true"
             :rows="10"
@@ -269,7 +270,7 @@ function calculateCustomerTotal(name) {
         <div class="font-semibold text-xl mb-4">Frozen Columns</div>
         <ToggleButton v-model="balanceFrozen" onIcon="pi pi-lock" offIcon="pi pi-lock-open" onLabel="Balance" offLabel="Balance" />
 
-        <DataTable :value="customers2" scrollable scrollHeight="400px" class="mt-6">
+        <DataTable paginatorPosition="both" :value="customers2" scrollable scrollHeight="400px" class="mt-6">
             <Column field="name" header="Name" style="min-width: 200px" frozen class="font-bold"></Column>
             <Column field="id" header="Id" style="min-width: 100px"></Column>
             <Column field="name" header="Name" style="min-width: 200px"></Column>
@@ -289,7 +290,7 @@ function calculateCustomerTotal(name) {
 
     <div class="card">
         <div class="font-semibold text-xl mb-4">Row Expansion</div>
-        <DataTable v-model:expandedRows="expandedRows" :value="products" dataKey="id" tableStyle="min-width: 60rem">
+        <DataTable paginatorPosition="both" v-model:expandedRows="expandedRows" :value="products" dataKey="id" tableStyle="min-width: 60rem">
             <template #header>
                 <div class="flex flex-wrap justify-end gap-2">
                     <Button text icon="pi pi-plus" label="Expand All" @click="expandAll" />
@@ -322,7 +323,7 @@ function calculateCustomerTotal(name) {
             <template #expansion="slotProps">
                 <div class="p-4">
                     <h5>Orders for {{ slotProps.data.name }}</h5>
-                    <DataTable :value="slotProps.data.orders">
+                    <DataTable paginatorPosition="both" :value="slotProps.data.orders">
                         <Column field="id" header="Id" sortable></Column>
                         <Column field="customer" header="Customer" sortable></Column>
                         <Column field="date" header="Date" sortable></Column>
@@ -349,7 +350,7 @@ function calculateCustomerTotal(name) {
 
     <div class="card">
         <div class="font-semibold text-xl mb-4">Grouping</div>
-        <DataTable :value="customers3" rowGroupMode="subheader" groupRowsBy="representative.name" sortMode="single" sortField="representative.name" :sortOrder="1" scrollable scrollHeight="400px" tableStyle="min-width: 50rem">
+        <DataTable paginatorPosition="both" :value="customers3" rowGroupMode="subheader" groupRowsBy="representative.name" sortMode="single" sortField="representative.name" :sortOrder="1" scrollable scrollHeight="400px" tableStyle="min-width: 50rem">
             <template #groupheader="slotProps">
                 <div class="flex items-center gap-2">
                     <img :alt="slotProps.data.representative.name" :src="`https://primefaces.org/cdn/primevue/images/avatar/${slotProps.data.representative.image}`" width="32" style="vertical-align: middle" />
