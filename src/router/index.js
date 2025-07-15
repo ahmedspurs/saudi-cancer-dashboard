@@ -193,95 +193,107 @@ const router = createRouter({
             path: '/auth/login',
             name: 'login',
             component: () => import('@/views/auth/Login.vue'),
-            meta: { auth: true }, // Public route
         },
         {
             path: '/auth/access',
             name: 'accessDenied',
             component: () => import('@/views/auth/Access.vue'),
-            meta: { auth: true }, // Public route
         },
         {
             path: '/auth/error',
             name: 'error',
             component: () => import('@/views/auth/Error.vue'),
-            meta: { auth: true }, // Public route
         },
     ],
 });
+// In-memory cache for user data
+let userCache = null;
+const userCacheTTL = 15 * 60 * 1000; // Cache for 5 minutes
 
-// Auth guard
+// Routes that don’t require authentication checks
+const publicRoutes = ['/auth/login', '/auth/access', '/auth/error'];
+
 router.beforeEach(async (to, from, next) => {
-    LoadingService.show();
-
-
-    // Check if user is authenticated
-    const loggedToken = localStorage.getItem('accessToken'); // Align with Axios instance
-    if (!loggedToken) {
-        LoadingService.hide();
-
-        return next({
-            path: '/auth/login',
-            query: { redirect: to.fullPath, error: 'not_authenticated' },
-        });
+    // Skip authentication checks for public routes
+    if (publicRoutes.includes(to.path)) {
+        LoadingService.hide(); // Ensure loading is hidden for public routes
+        return next();
     }
 
+    LoadingService.show();
+
     try {
-        // Fetch user data to verify roles
-        console.log("get me ");
-
-        if (to.meta?.auth) {
-
-            return next()
+        // Check if token exists
+        const loggedToken = localStorage.getItem('accessToken');
+        if (!loggedToken) {
+            return next({
+                path: '/auth/login',
+                query: { redirect: to.fullPath, error: 'not_authenticated' },
+            });
         }
-        const response = await api.instance.get('tokens/me'); // Adjust endpoint as needed
-        console.log({ me: response.data });
-        const user = response.data.data; // Assuming response: { data: { id, role, ... } }
 
-        if (response.status == 401) {
+        // Lightweight token validation (optional, for JWT)
+        const isTokenValid = () => {
+            try {
+                const payload = JSON.parse(atob(loggedToken.split('.')[1]));
+                return payload.exp * 1000 > Date.now();
+            } catch {
+                return false;
+            }
+        };
+
+        if (!isTokenValid()) {
+            api.clearAuth();
             return next({
                 path: '/auth/login',
                 query: { redirect: to.fullPath, error: 'session_expired' },
             });
         }
-        // Check required roles
+
+        // Fetch user data if not cached or cache is stale
+        if (!userCache || Date.now() - userCache.timestamp > userCacheTTL) {
+            const response = await api.instance.get('tokens/me');
+            if (response.status === 401) {
+                api.clearAuth();
+                return next({
+                    path: '/auth/login',
+                    query: { redirect: to.fullPath, error: 'session_expired' },
+                });
+            }
+            userCache = {
+                data: response.data.data,
+                timestamp: Date.now(),
+            };
+        }
+
+        const user = userCache.data;
         const requiredRoles = to.meta?.user_roles || [];
 
-        // If no roles are specified, allow access if authenticated
+        // Allow access if no roles are required
         if (!requiredRoles.length) {
-            LoadingService.hide();
-
             return next();
         }
 
-        // Verify user role
+        // Check if user has required roles
         const hasRequiredRole = user.roles.some(role => requiredRoles.includes(role));
-        console.log({ hasRequiredRole });
-
-
-
         if (hasRequiredRole) {
-            LoadingService.hide();
-
             return next();
-        } else {
-            LoadingService.hide();
-
-            return next({
-                path: '/auth/access',
-                query: { error: 'insufficient_permissions' },
-            });
         }
-    } catch (error) {
-        LoadingService.hide();
 
+        return next({
+            path: '/auth/access',
+            query: { error: 'insufficient_permissions' },
+        });
+    } catch (error) {
         console.error('Auth guard error:', {
             message: error.message,
-            status: error,
+            status: error.response?.status,
+            to: to.path, // Log the target route for debugging
+            from: from.path, // Log the source route
         });
 
-        // Handle token-related errors
-        if (error?.status === 401 || error.response?.status_code === 401) {
+        // Handle unauthorized errors
+        if (error.response?.status === 401) {
             api.clearAuth();
             return next({
                 path: '/auth/login',
@@ -296,9 +308,10 @@ router.beforeEach(async (to, from, next) => {
         });
     } finally {
         LoadingService.hide();
-
-        window.scrollTo(0, 0); // Reset scroll position
+        // Only reset scroll if specified in route meta
+        if (to.meta?.resetScroll) {
+            window.scrollTo(0, 0);
+        }
     }
 });
-
 export default router;
