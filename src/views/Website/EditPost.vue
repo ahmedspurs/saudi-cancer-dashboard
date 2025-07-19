@@ -30,10 +30,12 @@ const post = ref({
     slug: ''
 });
 
-// Gallery images and featured image
+// Gallery images, featured image, and video
 const post_images = ref([]);
-const imageFile = ref(null); // For featured image (news or gallery)
-const existingImageUrl = ref(null); // Store existing featured image URL
+const imageFile = ref(null);
+const existingImageUrl = ref(null);
+const videoFile = ref(null); // For new video file (video_url)
+const existingVideoUrl = ref(null); // Store existing video URL
 const submitted = ref(false);
 const loading = ref(false);
 
@@ -61,12 +63,13 @@ const getPost = async (id) => {
                 slug: postData.slug || ''
             };
             existingImageUrl.value = postData.image_url || null;
+            existingVideoUrl.value = postData.video_url || null;
             if (postData.type.code == 'gallery') {
                 post_images.value = res.data.post_images.map((img, index) => ({
                     file: null,
                     image_url: img.image_url,
                     sort_order: img.sort_order || index,
-                    id: img.id // Store image ID for updates/deletions
+                    id: img.id
                 }));
             }
         } else {
@@ -83,7 +86,7 @@ const getPost = async (id) => {
 // Initialize data
 onMounted(async () => {
     await getPostTypes();
-    const postId = route.params.id; // Get post ID from route
+    const postId = route.params.id;
     if (postId) {
         await getPost(postId);
     }
@@ -130,7 +133,9 @@ const updatePost = async () => {
     if (imageFile.value) {
         formData.append('image_url', imageFile.value);
     }
-
+    if (videoFile.value) {
+        formData.append('video_url', videoFile.value);
+    }
     if (post.value.type.code === 'gallery') {
         post_images.value.forEach((image, index) => {
             if (image.file) {
@@ -141,7 +146,7 @@ const updatePost = async () => {
                 images.push(image.id);
             }
         });
-        formData.append(`image_ids`, images); // Include existing image IDs
+        formData.append(`image_ids`, images);
     }
 
     try {
@@ -180,7 +185,27 @@ const onSelectImage = (event) => {
             return;
         }
         imageFile.value = file;
-        existingImageUrl.value = null; // Clear existing image URL if new file is selected
+        existingImageUrl.value = null;
+        event.files = [];
+    }
+};
+
+// Handle video selection
+const onSelectVideo = (event) => {
+    const file = event.files[0];
+    if (file) {
+        if (file.size > 10000000) {
+            toast.add({ severity: 'error', summary: 'خطأ', detail: 'حجم الفيديو يجب ألا يتجاوز 10 ميغابايت', life: 3000 });
+            event.files = [];
+            return;
+        }
+        if (!file.type.startsWith('video/')) {
+            toast.add({ severity: 'error', summary: 'خطأ', detail: 'يجب تحميل فيديو فقط', life: 3000 });
+            event.files = [];
+            return;
+        }
+        videoFile.value = file;
+        existingVideoUrl.value = null;
         event.files = [];
     }
 };
@@ -200,7 +225,7 @@ const onSelectpost_images = (event) => {
             }
             post_images.value.push({ file, sort_order: post_images.value.length, image_url: null });
         });
-        event.files = []; // Clear FileUpload
+        event.files = [];
     }
 };
 
@@ -215,7 +240,6 @@ const goBack = () => {
     router.push('/posts');
 };
 </script>
-
 <template>
     <div dir="rtl" class="p-6 mx-auto max-w-4xl">
         <Toast />
@@ -286,6 +310,20 @@ const goBack = () => {
                         <small v-if="imageFile" class="text-gray-500">{{ imageFile.name }}</small>
                         <div v-if="existingImageUrl && !imageFile" class="mt-2">
                             <img :src="$imageService.getImageUrl(existingImageUrl)" alt="Existing Featured Image" class="max-w-xs" />
+                        </div>
+                    </div>
+
+                    <!-- Video Upload -->
+                    <div class="flex flex-col md:col-span-2">
+                        <label for="video" class="block font-bold mb-2">فيديو (اختياري)</label>
+                        <FileUpload name="video" accept="video/*" :maxFileSize="10000000" @select="onSelectVideo" chooseLabel="اختيار فيديو" :multiple="false" :showUploadButton="false" :showCancelButton="true">
+                            <template #empty>
+                                <span>اسحب الفيديو هنا لرفعه.</span>
+                            </template>
+                        </FileUpload>
+                        <small v-if="videoFile" class="text-gray-500">{{ videoFile.name }}</small>
+                        <div v-if="existingVideoUrl && !videoFile" class="mt-2">
+                            <video :src="$imageService.getImageUrl(existingVideoUrl)" controls class="max-w-xs" />
                         </div>
                     </div>
 

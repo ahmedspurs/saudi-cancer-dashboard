@@ -242,13 +242,13 @@ router.beforeEach(async (to, from, next) => {
             }
         };
 
-        if (!isTokenValid()) {
-            api.clearAuth();
-            return next({
-                path: '/auth/login',
-                query: { redirect: to.fullPath, error: 'session_expired' },
-            });
-        }
+        // if (!isTokenValid()) {
+        //     api.clearAuth();
+        //     return next({
+        //         path: '/auth/login',
+        //         query: { redirect: to.fullPath, error: 'session_expired' },
+        //     });
+        // }
 
         // Fetch user data if not cached or cache is stale
         if (!userCache || Date.now() - userCache.timestamp > userCacheTTL) {

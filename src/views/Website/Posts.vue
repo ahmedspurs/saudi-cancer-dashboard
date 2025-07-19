@@ -181,11 +181,7 @@ const navigateToEdit = (id) => {
             v-model:filters="filters"
             :value="items"
             dataKey="id"
-            :rows="options.limit"
-            :totalRecords="total"
             :loading="loading"
-            :paginator="true"
-            :rowsPerPageOptions="[5, 10, 25]"
             @page="onPageChange"
             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
             currentPageReportTemplate="عرض {first} إلى {last} من {totalRecords} منشورات"
@@ -235,7 +231,15 @@ const navigateToEdit = (id) => {
                 </template>
             </Column>
         </DataTable>
-
+        <Paginator
+            :rows="options.limit"
+            :totalRecords="total"
+            :currentPage="options.page"
+            @page="get"
+            paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+            :rowsPerPageOptions="[5, 10, 25]"
+            currentPageReportTemplate="عرض {first} إلى {last} من {totalRecords} أعضاء"
+        ></Paginator>
         <Dialog v-model:visible="deleteItemDialog" :style="{ width: '450px' }" header="تأكيد الحذف" :modal="true" style="direction: rtl; text-align: right">
             <div class="flex items-center gap-4">
                 <i class="pi pi-exclamation-triangle !text-3xl" />

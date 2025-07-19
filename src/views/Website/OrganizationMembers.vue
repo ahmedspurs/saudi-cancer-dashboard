@@ -6,6 +6,7 @@ import { onMounted, ref } from 'vue';
 
 onMounted(() => {
     get();
+    getMemberType();
 });
 
 const toast = useToast();
@@ -29,13 +30,13 @@ const filters = ref({
 });
 const submitted = ref(false);
 const loading = ref(false);
-const imageFile = ref(null);
+const imageFile = ref(null); // Stores the File object for new uploads
+const memberTypes = ref([]);
 
-const memberTypes = ref([
-    { label: 'مؤسس', value: 'founder' },
-    { label: 'مجلس الإدارة', value: 'board_of_directors' },
-    { label: 'الجمعية العمومية', value: 'general_assembly' }
-]);
+const getMemberType = async () => {
+    const res = await request.get('member-types');
+    memberTypes.value = res.data;
+};
 
 const search = async () => {
     const res = await request.post('organization-members/search', options.value);
@@ -95,15 +96,15 @@ function onSelectImage(event) {
             event.files = [];
             return;
         }
-        imageFile.value = file;
-        item.value.previewImage = URL.createObjectURL(file);
+        imageFile.value = file; // Store the File object
+        item.value.previewImage = URL.createObjectURL(file); // For preview only
         event.files = [];
     }
 }
 
 async function saveItem() {
     submitted.value = true;
-    if (!item.value.name_ar || !item.value.type) {
+    if (!item.value.name_ar || !item.value.type_id) {
         toast.add({ severity: 'error', summary: 'خطأ', detail: 'الاسم العربي ونوع العضو مطلوبان', life: 3000 });
         return;
     }
@@ -116,15 +117,17 @@ async function saveItem() {
     if (item.value.position_en) formData.append('position_en', item.value.position_en);
     if (item.value.description_ar) formData.append('description_ar', item.value.description_ar);
     if (item.value.description_en) formData.append('description_en', item.value.description_en);
-    formData.append('type', item.value.type);
+    formData.append('type_id', item.value.type_id);
     formData.append('is_active', item.value.is_active ? '1' : '0');
     formData.append('sort_order', item.value.sort_order || 0);
-    if (imageFile.value) {
-        formData.append('image_url', imageFile.value);
+    if (imageFile.value instanceof File) {
+        formData.append('image', imageFile.value); // Append only if it's a File object
     }
 
     try {
-        const res = await request.post('organization-members', formData);
+        const res = await request.post('organization-members', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
         if (res.status) {
             toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم إنشاء العضو', life: 3000 });
             get();
@@ -144,7 +147,7 @@ async function saveItem() {
 
 async function edit() {
     submitted.value = true;
-    if (!item.value.name_ar || !item.value.type) {
+    if (!item.value.name_ar || !item.value.type_id) {
         toast.add({ severity: 'error', summary: 'خطأ', detail: 'الاسم العربي ونوع العضو مطلوبان', life: 3000 });
         return;
     }
@@ -157,15 +160,19 @@ async function edit() {
     if (item.value.position_en) formData.append('position_en', item.value.position_en);
     if (item.value.description_ar) formData.append('description_ar', item.value.description_ar);
     if (item.value.description_en) formData.append('description_en', item.value.description_en);
-    formData.append('type', item.value.type);
+    formData.append('type_id', item.value.type_id);
     formData.append('is_active', item.value.is_active ? '1' : '0');
     formData.append('sort_order', item.value.sort_order || 0);
-    if (imageFile.value) {
-        formData.append('image_url', imageFile.value);
+    if (imageFile.value instanceof File) {
+        formData.append('image', imageFile.value); // Append only if a new File is uploaded
+    } else if (!item.value.image && item.value.image !== undefined) {
+        formData.append('image', ''); // Indicate removal of image if needed
     }
 
     try {
-        const res = await request.put(`organization-members`, item.value.id, formData);
+        const res = await request.put(`organization-members`, item.value.id, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
         if (res.status) {
             toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم تحديث العضو', life: 3000 });
             get();
@@ -185,8 +192,8 @@ async function edit() {
 
 function editItem(member) {
     item.value = { ...member, sort_order: member.sort_order || 0 };
-    imageFile.value = null;
-    item.value.previewImage = null;
+    imageFile.value = null; // Reset imageFile to null (no new file uploaded yet)
+    item.value.previewImage = member.image || null; // Use existing image URL for preview
     editItemDialog.value = true;
 }
 
@@ -242,7 +249,7 @@ async function deleteSelectedItems() {
 }
 
 function removeImage() {
-    item.value.image_url = null;
+    item.value.image = null;
     imageFile.value = null;
     item.value.previewImage = null;
 }
@@ -278,7 +285,7 @@ function removeImage() {
             <Column field="position_ar" header="المنصب (عربي)" sortable style="min-width: 12rem"></Column>
             <Column field="type" header="النوع" sortable style="min-width: 10rem">
                 <template #body="slotProps">
-                    {{ memberTypes.find((type) => type.value === slotProps.data.type)?.label || slotProps.data.type }}
+                    {{ slotProps.data.type.name || '-' }}
                 </template>
             </Column>
             <Column field="is_active" header="نشط" sortable style="min-width: 8rem">
@@ -286,9 +293,9 @@ function removeImage() {
                     <i :class="slotProps.data.is_active ? 'pi pi-check text-green-500' : 'pi pi-times text-red-500'"></i>
                 </template>
             </Column>
-            <Column field="image_url" header="الصورة" style="min-width: 10rem">
+            <Column field="image" header="الصورة" style="min-width: 10rem">
                 <template #body="slotProps">
-                    <img v-if="slotProps.data.image_url" :src="slotProps.data.image_url" alt="Member Image" style="width: 50px; height: auto" />
+                    <img v-if="slotProps.data.image" :src="$imageService.getImageUrl(slotProps.data.image)" alt="Member Image" style="width: 50px; height: auto" />
                     <span v-else>-</span>
                 </template>
             </Column>
@@ -331,7 +338,7 @@ function removeImage() {
             </div>
             <div>
                 <label for="type" class="block font-bold mb-2">النوع</label>
-                <Dropdown id="type" v-model="item.type" :options="memberTypes" optionLabel="label" optionValue="value" placeholder="اختر نوع العضو" class="w-full" :invalid="submitted && !item.type" />
+                <Dropdown id="type" v-model="item.type_id" :options="memberTypes" optionLabel="name" optionValue="id" placeholder="اختر نوع العضو" class="w-full" :invalid="submitted && !item.type" />
                 <small v-if="submitted && !item.type" class="text-red-500">نوع العضو مطلوب.</small>
             </div>
             <div>
@@ -350,7 +357,7 @@ function removeImage() {
                     </template>
                 </FileUpload>
                 <small v-if="imageFile" class="text-gray-500">{{ imageFile.name }}</small>
-                <img v-if="item.previewImage" :src="item.previewImage" alt="Preview" style="width: 100px; height: auto; margin-top: 10px" />
+                <img vigeons="item.previewImage" :src="item.previewImage" alt="Preview" style="width: 100px; height: auto; margin-top: 10px" />
             </div>
             <div>
                 <label for="sort_order" class="block font-bold mb-2">ترتيب العرض</label>
@@ -388,7 +395,7 @@ function removeImage() {
             </div>
             <div>
                 <label for="type" class="block font-bold mb-2">النوع</label>
-                <Dropdown id="type" v-model="item.type" :options="memberTypes" optionLabel="label" optionValue="value" placeholder="اختر نوع العضو" class="w-full" :invalid="submitted && !item.type" />
+                <Dropdown id="type" v-model="item.type_id" :options="memberTypes" optionLabel="name" optionValue="id" placeholder="اختر نوع العضو" class="w-full" :invalid="submitted && !item.type" />
                 <small v-if="submitted && !item.type" class="text-red-500">نوع العضو مطلوب.</small>
             </div>
             <div>
@@ -407,8 +414,8 @@ function removeImage() {
                     </template>
                 </FileUpload>
                 <small v-if="imageFile" class="text-gray-500">{{ imageFile.name }}</small>
-                <div v-if="item.previewImage || item.image_url" class="mt-2">
-                    <img :src="item.previewImage || item.image_url" alt="Image" style="width: 100px; height: auto" />
+                <div v-if="item.previewImage || item.image" class="mt-2">
+                    <img :src="item.previewImage || item.image" alt="Image" style="width: 100px; height: auto" />
                     <Button label="إزالة الصورة" icon="pi pi-trash" severity="danger" text @click="removeImage" class="mt-2" />
                 </div>
             </div>

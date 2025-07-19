@@ -37,9 +37,10 @@ const getPostTypes = async () => {
     postTypes.value = res.data;
 };
 
-// Gallery images and featured image
+// Gallery images, featured image, and video
 const galleryImages = ref([]);
 const imageFile = ref(null); // For featured image (news or gallery)
+const videoFile = ref(null); // For video file (video_url)
 const submitted = ref(false);
 const loading = ref(false);
 
@@ -83,6 +84,9 @@ const savePost = async () => {
     if (imageFile.value) {
         formData.append('image_url', imageFile.value);
     }
+    if (videoFile.value) {
+        formData.append('video_url', videoFile.value);
+    }
     if (post.value.type.code === 'gallery') {
         galleryImages.value.forEach((image, index) => {
             formData.append(`images[${index}]`, image.file);
@@ -98,7 +102,7 @@ const savePost = async () => {
         if (res.status) {
             toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم إضافة المنشور بنجاح', life: 3000 });
             resetForm();
-            router.push('/posts'); // Adjust route as needed
+            router.push('/posts');
         } else {
             toast.add({ severity: 'error', summary: 'خطأ', detail: res.msg || 'فشل في إضافة المنشور', life: 3000 });
         }
@@ -130,6 +134,25 @@ const onSelectImage = (event) => {
     }
 };
 
+// Handle video selection
+const onSelectVideo = (event) => {
+    const file = event.files[0];
+    if (file) {
+        if (file.size > 10000000) {
+            toast.add({ severity: 'error', summary: 'خطأ', detail: 'حجم الفيديو يجب ألا يتجاوز 10 ميغابايت', life: 3000 });
+            event.files = [];
+            return;
+        }
+        if (!file.type.startsWith('video/')) {
+            toast.add({ severity: 'error', summary: 'خطأ', detail: 'يجب تحميل فيديو فقط', life: 3000 });
+            event.files = [];
+            return;
+        }
+        videoFile.value = file;
+        event.files = [];
+    }
+};
+
 // Handle multiple image selection for gallery posts
 const onSelectGalleryImages = (event) => {
     const files = event.files;
@@ -145,7 +168,7 @@ const onSelectGalleryImages = (event) => {
             }
             galleryImages.value.push({ file, sort_order: galleryImages.value.length });
         });
-        event.files = []; // Clear FileUpload
+        event.files = [];
     }
 };
 
@@ -169,15 +192,15 @@ const resetForm = () => {
     };
     imageFile.value = null;
     galleryImages.value = [];
+    videoFile.value = null;
     submitted.value = false;
 };
 
 // Go back
 const goBack = () => {
-    router.push('/posts'); // Adjust route as needed
+    router.push('/posts');
 };
 </script>
-
 <template>
     <div dir="rtl" class="p-6 mx-auto max-w-4xl">
         <Toast />
@@ -246,6 +269,17 @@ const goBack = () => {
                             </template>
                         </FileUpload>
                         <small v-if="imageFile" class="text-gray-500">{{ imageFile.name }}</small>
+                    </div>
+
+                    <!-- Video Upload -->
+                    <div class="flex flex-col md:col-span-2">
+                        <label for="video" class="block font-bold mb-2">فيديو (اختياري)</label>
+                        <FileUpload name="video" accept="video/*" :maxFileSize="10000000" @select="onSelectVideo" chooseLabel="اختيار فيديو" :multiple="false" :showUploadButton="false" :showCancelButton="true">
+                            <template #empty>
+                                <span>اسحب الفيديو هنا لرفعه.</span>
+                            </template>
+                        </FileUpload>
+                        <small v-if="videoFile" class="text-gray-500">{{ videoFile.name }}</small>
                     </div>
 
                     <!-- Gallery Images (only for gallery type) -->

@@ -32,10 +32,19 @@ const loading = ref(false);
 const imageFile = ref(null);
 
 const search = async () => {
-    const res = await request.post('partners/search', options.value);
-    if (res.status) {
-        items.value = res.data;
-        total.value = res.tot;
+    loading.value = true;
+    try {
+        const res = await request.post('partners/search', options.value);
+        if (res.status) {
+            items.value = res.data;
+            total.value = res.tot;
+        } else {
+            toast.add({ severity: 'error', summary: 'خطأ', detail: res.message || 'فشل في البحث', life: 3000 });
+        }
+    } catch (error) {
+        toast.add({ severity: 'error', summary: 'خطأ', detail: error.response?.data?.message || error.message || 'فشل في البحث', life: 3000 });
+    } finally {
+        loading.value = false;
     }
 };
 
@@ -50,9 +59,12 @@ const get = async (e) => {
         if (res.status) {
             items.value = res.data;
             total.value = res.tot;
+        } else {
+            toast.add({ severity: 'error', summary: 'خطأ', detail: res.message || 'فشل في جلب البيانات', life: 3000 });
         }
-        loading.value = false;
     } catch (error) {
+        toast.add({ severity: 'error', summary: 'خطأ', detail: error.response?.data?.message || error.message || 'فشل في جلب البيانات', life: 3000 });
+    } finally {
         loading.value = false;
     }
 };
@@ -68,29 +80,43 @@ function openNew() {
 function hideDialog() {
     itemDialog.value = false;
     submitted.value = false;
+    if (item.value.previewImage) {
+        URL.revokeObjectURL(item.value.previewImage);
+        item.value.previewImage = null;
+    }
+    imageFile.value = null;
 }
 
 function hideEditDialog() {
     editItemDialog.value = false;
     submitted.value = false;
+    if (item.value.previewImage && item.value.previewImage !== item.value.image_url) {
+        URL.revokeObjectURL(item.value.previewImage);
+        item.value.previewImage = null;
+    }
+    imageFile.value = null;
 }
 
 function onSelectImage(event) {
     const file = event.files[0];
     if (file) {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg', 'image/webp'];
         if (file.size > 1000000) {
             toast.add({ severity: 'error', summary: 'خطأ', detail: 'حجم الصورة يجب ألا يتجاوز 1 ميغابايت', life: 3000 });
             event.files = [];
             return;
         }
-        if (!file.type.startsWith('image/')) {
-            toast.add({ severity: 'error', summary: 'خطأ', detail: 'يجب تحميل صورة فقط', life: 3000 });
+        if (!allowedTypes.includes(file.type)) {
+            toast.add({ severity: 'error', summary: 'خطأ', detail: 'يجب تحميل صورة بصيغة JPEG أو PNG أو GIF', life: 3000 });
             event.files = [];
             return;
         }
-        imageFile.value = file;
-        item.value.previewImage = URL.createObjectURL(file);
-        event.files = [];
+        imageFile.value = file; // Store the raw File object
+        if (item.value.previewImage && item.value.previewImage !== item.value.image_url) {
+            URL.revokeObjectURL(item.value.previewImage);
+        }
+        item.value.previewImage = URL.createObjectURL(file); // Create object URL for preview
+        event.files = []; // Clear the file input
     }
 }
 
@@ -105,22 +131,31 @@ async function saveItem() {
     const formData = new FormData();
     formData.append('name', item.value.name);
     formData.append('name_en', item.value.name_en);
-    if (imageFile.value) formData.append('image', imageFile.value);
+    if (imageFile.value) {
+        formData.append('image', imageFile.value, imageFile.value.name); // Append file with name
+    }
 
     try {
-        const res = await request.post('partners', formData);
+        const res = await request.post('partners', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
         if (res.status) {
             toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم إنشاء الشريك', life: 3000 });
             get();
             item.value = {};
             imageFile.value = null;
-            item.value.previewImage = null;
+            if (item.value.previewImage) {
+                URL.revokeObjectURL(item.value.previewImage);
+                item.value.previewImage = null;
+            }
             hideDialog();
         } else {
             toast.add({ severity: 'error', summary: 'خطأ', detail: res.message || 'فشل في إنشاء الشريك', life: 3000 });
         }
     } catch (error) {
-        toast.add({ severity: 'error', summary: 'خطأ', detail: error.message || 'فشل في إنشاء الشريك', life: 3000 });
+        toast.add({ severity: 'error', summary: 'خطأ', detail: error.response?.data?.message || error.message || 'فشل في إنشاء الشريك', life: 3000 });
     } finally {
         loading.value = false;
     }
@@ -137,22 +172,33 @@ async function edit() {
     const formData = new FormData();
     formData.append('name', item.value.name);
     formData.append('name_en', item.value.name_en);
-    if (imageFile.value) formData.append('image', imageFile.value);
+    if (imageFile.value) {
+        formData.append('image', imageFile.value, imageFile.value.name); // Append file with name
+    } else if (!item.value.image_url) {
+        formData.append('removeImage', 'true'); // Signal to backend to remove image
+    }
 
     try {
-        const res = await request.put(`partners`, item.value.id, formData);
+        const res = await request.put(`partners/`, item.value.id, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
         if (res.status) {
             toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم تحديث الشريك', life: 3000 });
             get();
             item.value = {};
             imageFile.value = null;
-            item.value.previewImage = null;
+            if (item.value.previewImage && item.value.previewImage !== item.value.image_url) {
+                URL.revokeObjectURL(item.value.previewImage);
+                item.value.previewImage = null;
+            }
             hideEditDialog();
         } else {
             toast.add({ severity: 'error', summary: 'خطأ', detail: res.message || 'فشل في تحديث الشريك', life: 3000 });
         }
     } catch (error) {
-        toast.add({ severity: 'error', summary: 'خطأ', detail: error.message || 'فشل في تحديث الشريك', life: 3000 });
+        toast.add({ severity: 'error', summary: 'خطأ', detail: error.response?.data?.message || error.message || 'فشل في تحديث الشريك', life: 3000 });
     } finally {
         loading.value = false;
     }
@@ -160,8 +206,8 @@ async function edit() {
 
 function editItem(prod) {
     item.value = { ...prod };
-    imageFile.value = null;
-    item.value.previewImage = null;
+    imageFile.value = null; // Clear any previous file
+    item.value.previewImage = item.value.image_url || null; // Use existing image for preview
     editItemDialog.value = true;
 }
 
@@ -173,7 +219,7 @@ function confirmDeleteItem(prod) {
 async function deleteItem() {
     loading.value = true;
     try {
-        const res = await request.delete(`partners`, item.value?.id);
+        const res = await request.delete(`partners/`, item.value?.id);
         if (res.status) {
             toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم حذف الشريك', life: 3000 });
             get();
@@ -182,7 +228,7 @@ async function deleteItem() {
             toast.add({ severity: 'error', summary: 'خطأ', detail: res.message || 'فشل في حذف الشريك', life: 3000 });
         }
     } catch (error) {
-        toast.add({ severity: 'error', summary: 'خطأ', detail: error.message || 'فشل في حذف الشريك', life: 3000 });
+        toast.add({ severity: 'error', summary: 'خطأ', detail: error.response?.data?.message || error.message || 'فشل في حذف الشريك', life: 3000 });
     } finally {
         loading.value = false;
     }
@@ -200,7 +246,7 @@ async function deleteSelectedItems() {
     const items = selectedItems.value.map((item) => item.id);
     loading.value = true;
     try {
-        const res = await request.delete('partners/bulk', { ids: items });
+        const res = await request.delete('partners/bulk', { data: { ids: items } });
         if (res.status) {
             selectedItems.value = null;
             toast.add({ severity: 'success', summary: 'نجاح', detail: 'تم حذف الشركاء', life: 3000 });
@@ -210,16 +256,19 @@ async function deleteSelectedItems() {
             toast.add({ severity: 'error', summary: 'خطأ', detail: res.message || 'فشل في حذف الشركاء', life: 3000 });
         }
     } catch (error) {
-        toast.add({ severity: 'error', summary: 'خطأ', detail: error.message || 'فشل في حذف الشركاء', life: 3000 });
+        toast.add({ severity: 'error', summary: 'خطأ', detail: error.response?.data?.message || error.message || 'فشل في حذف الشركاء', life: 3000 });
     } finally {
         loading.value = false;
     }
 }
 
 function removeImage() {
+    if (item.value.previewImage && item.value.previewImage !== item.value.image_url) {
+        URL.revokeObjectURL(item.value.previewImage);
+    }
+    item.value.previewImage = null;
     item.value.image_url = null;
     imageFile.value = null;
-    item.value.previewImage = null;
 }
 </script>
 
@@ -252,7 +301,7 @@ function removeImage() {
             <Column field="name_en" header="الاسم (إنجليزي)" sortable style="min-width: 12rem"></Column>
             <Column field="image_url" header="الصورة" style="min-width: 10rem">
                 <template #body="slotProps">
-                    <img v-if="slotProps.data.image_url" :src="slotProps.data.image_url" alt="Partner Image" style="width: 50px; height: auto" />
+                    <img v-if="slotProps.data.image" :src="$imageService.getImageUrl(slotProps.data.image)" alt="Member Image" style="width: 50px; height: auto" />
                     <span v-else>-</span>
                 </template>
             </Column>
@@ -293,8 +342,8 @@ function removeImage() {
                         <span>اسحب الصورة هنا لرفعها.</span>
                     </template>
                 </FileUpload>
+                <img v-if="item.previewImage" :src="item.previewImage" alt="Image Preview" style="max-width: 100px; margin-top: 10px" />
                 <small v-if="imageFile" class="text-gray-500">{{ imageFile.name }}</small>
-                <img v-if="item.previewImage" :src="item.previewImage" alt="Preview" style="width: 100px; height: auto; margin-top: 10px" />
             </div>
         </div>
         <template #footer>
@@ -322,11 +371,9 @@ function removeImage() {
                         <span>اسحب الصورة هنا لرفعها.</span>
                     </template>
                 </FileUpload>
+                <img v-if="item.previewImage || item.image_url" :src="item.previewImage || item.image_url" alt="Image Preview" style="max-width: 100px; margin-top: 10px" />
                 <small v-if="imageFile" class="text-gray-500">{{ imageFile.name }}</small>
-                <div v-if="item.previewImage || item.image_url" class="mt-2">
-                    <img :src="item.previewImage || item.image_url" alt="Image" style="width: 100px; height: auto" />
-                    <Button label="إزالة الصورة" icon="pi pi-trash" severity="danger" text @click="removeImage" class="mt-2" />
-                </div>
+                <Button v-if="item.previewImage || item.image_url" label="إزالة الصورة" icon="pi pi-trash" text severity="danger" @click="removeImage" :loading="loading" />
             </div>
         </div>
         <template #footer>
